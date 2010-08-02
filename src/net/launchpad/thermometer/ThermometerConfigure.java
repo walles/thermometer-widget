@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
+import android.util.Log;
 
 /**
  * Configuration dialog for the {@link ThermometerWidget}.
@@ -13,8 +14,6 @@ import android.preference.PreferenceActivity;
  * @author johan.walles@gmail.com
  */
 public class ThermometerConfigure extends PreferenceActivity {
-    int appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,23 +34,8 @@ public class ThermometerConfigure extends PreferenceActivity {
             }
         });
 
-        // Find the widget id from the intent.
-        Intent intent = getIntent();
-        Bundle extras = intent.getExtras();
-        if (extras != null) {
-            appWidgetId = extras.getInt(
-                AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
-        }
-
-        // If they gave us an intent without the widget id, just bail.
-        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            finish();
-        }
-
         // Register "success" as a result for once the user is done
-        Intent resultValue = new Intent();
-        resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
-        setResult(RESULT_OK, resultValue);
+        setResult(RESULT_OK);
     }
 
     @Override
@@ -74,6 +58,6 @@ public class ThermometerConfigure extends PreferenceActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        ThermometerWidget.update(this, new int[] { appWidgetId });
+        ThermometerWidget.update(this);
     }
 }

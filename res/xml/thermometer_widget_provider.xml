@@ -4,4 +4,4 @@
    android:minHeight="72dip"
    android:initialLayout="@layout/main"
    android:minWidth="72dip"
-   android:updatePeriodMillis="3600000" android:configure="net.launchpad.thermometer.ThermometerConfigure"/>
+   android:updatePeriodMillis="3600000"/>

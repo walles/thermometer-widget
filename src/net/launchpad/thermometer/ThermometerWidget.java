@@ -42,18 +42,10 @@ public class ThermometerWidget extends AppWidgetProvider {
      * Internet.
      */
     private static class TemperatureFetcher extends AsyncTask<Object, Long, JSONObject> {
-        private RemoteViews remoteViews;
-        private AppWidgetManager appWidgetManager;
-        private SharedPreferences preferences;
+        private Context context;
 
-        public TemperatureFetcher(
-            RemoteViews remoteViews,
-            AppWidgetManager appWidgetManager,
-            SharedPreferences preferences)
-        {
-            this.remoteViews = remoteViews;
-            this.appWidgetManager = appWidgetManager;
-            this.preferences = preferences;
+        public TemperatureFetcher(Context context) {
+            this.context = context;
         }
 
         @Override
@@ -136,7 +128,7 @@ public class ThermometerWidget extends AppWidgetProvider {
             // Read data from that URL into a string
             StringBuilder jsonBuilder = new StringBuilder();
             BufferedReader in =
-                new BufferedReader(new InputStreamReader(url.openStream()));
+                new BufferedReader(new InputStreamReader(url.openStream()), 1024);
             try {
                 String data;
                 while ((data = in.readLine()) != null) {
@@ -171,6 +163,8 @@ public class ThermometerWidget extends AppWidgetProvider {
                             weatherObservation.getString("datetime"),
                             weatherObservation.getString("stationName")));
 
+                    SharedPreferences preferences =
+                        PreferenceManager.getDefaultSharedPreferences(context);
                     if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
                         double farenheit = centigrades * 9.0 / 5.0 + 32.0;
                         degrees = Long.toString(Math.round(farenheit));
@@ -182,6 +176,12 @@ public class ThermometerWidget extends AppWidgetProvider {
             }
 
             // Publish the fetched temperature
+            RemoteViews remoteViews =
+                new RemoteViews(ThermometerWidget.class.getPackage().getName(),
+                    R.layout.main);
+            AppWidgetManager appWidgetManager =
+                AppWidgetManager.getInstance(context);
+
             remoteViews.setTextViewText(R.id.TextView, degrees + "°");
             for (int widgetId : appWidgetIds) {
                 appWidgetManager.updateAppWidget(widgetId, remoteViews);
@@ -206,29 +206,24 @@ public class ThermometerWidget extends AppWidgetProvider {
 
             // Create an Intent to launch the preferences activity
             Intent intent = new Intent(context, ThermometerConfigure.class);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
-            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
+            PendingIntent pendingIntent =
+                PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
             // Get the layout for the App Widget and attach an on-click listener to the button
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.main);
             views.setOnClickPendingIntent(R.id.TextView, pendingIntent);
+
+            // Tell the AppWidgetManager to go live with the new pending intent
+            appWidgetManager.updateAppWidget(id, views);
         }
-        update(context, updatedAppWidgetIds);
+        update(context);
     }
 
     /**
      * Update what the widget displays.
      */
-    public static void update(Context context, int updatedAppWidgetIds[]) {
+    public static void update(Context context) {
         Log.d(TAG, "update() called");
-
-        for (int updatedId : updatedAppWidgetIds) {
-            appWidgetIds.add(updatedId);
-        }
-
-        RemoteViews remoteViews =
-            new RemoteViews(ThermometerWidget.class.getPackage().getName(),
-                R.layout.main);
 
         boolean alreadyFetching = false;
         if (temperatureFetcher != null) {
@@ -238,13 +233,7 @@ public class ThermometerWidget extends AppWidgetProvider {
         }
         if (!alreadyFetching) {
             // No previous fetch running, let's do it again!
-            AppWidgetManager appWidgetManager =
-                AppWidgetManager.getInstance(context);
-            SharedPreferences preferences =
-                PreferenceManager.getDefaultSharedPreferences(context);
-            temperatureFetcher =
-                new TemperatureFetcher(remoteViews, appWidgetManager,
-                    preferences);
+            temperatureFetcher = new TemperatureFetcher(context);
             temperatureFetcher.execute();
         }
     }
