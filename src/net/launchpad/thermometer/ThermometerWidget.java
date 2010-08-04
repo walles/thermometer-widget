@@ -5,19 +5,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.IntentService;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -33,23 +34,28 @@ public class ThermometerWidget extends AppWidgetProvider {
      */
     public static final String TAG = "ThermWidget";
 
-    private static TemperatureFetcher temperatureFetcher;
-
     private static Set<Integer> appWidgetIds = new HashSet<Integer>();
 
     /**
      * A background task fetching the current outdoor temperature from the
      * Internet.
      */
-    private static class TemperatureFetcher extends AsyncTask<Object, Long, JSONObject> {
-        private Context context;
-
-        public TemperatureFetcher(Context context) {
-            this.context = context;
+    public static class TemperatureFetcher extends IntentService {
+        public TemperatureFetcher() {
+            super("Temperature Fetcher");
         }
 
         @Override
-        protected JSONObject doInBackground(Object... ignored) {
+        protected void onHandleIntent(Intent intent) {
+            try {
+                JSONObject weather = fetchWeather();
+                updateUi(weather);
+            } catch (Throwable t) {
+                Log.e(TAG, "Fetching / updating weather failed", t);
+            }
+        }
+
+        private JSONObject fetchWeather() {
             double latitude = 59.3190;
             double longitude = 18.0518;
 
@@ -66,7 +72,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                         latitude, longitude);
 
                 url = new URL(urlString);
-                Log.d(TAG, "JSON URL created: " + url);
+                Log.v(TAG, "JSON URL created: " + url);
             } catch (MalformedURLException e) {
                 Log.e(TAG, "Internal error creating JSON URL from: " + urlString, e);
                 return null;
@@ -77,18 +83,24 @@ public class ThermometerWidget extends AppWidgetProvider {
             long delayMs = 5000;
             while (jsonString == null) {
                 attempt++;
+                boolean mightRetry = (attempt <= 5);
+
                 try {
                     jsonString = fetchUrl(url);
                     break;
                 } catch (IOException e) {
+                    String retryString = "";
+                    if (mightRetry) {
+                        retryString =
+                            ", will retry in " + (delayMs / 1000L) + "s";
+                    }
                     Log.w(TAG, "Error reading weather data on attempt "
-                        + attempt
-                        + ", will retry in " + (delayMs / 1000L) + "s: "
-                        + url, e);
+                        + attempt + retryString + ": " + url,
+                        e);
                 }
 
-                if (attempt > 5) {
-                    // Give up after five attempts
+                if (!mightRetry) {
+                    // We've done our best and failed, give up
                     break;
                 }
 
@@ -125,10 +137,15 @@ public class ThermometerWidget extends AppWidgetProvider {
          * @throws IOException if downloading data from the URL fails.
          */
         private String fetchUrl(URL url) throws IOException {
-            // Read data from that URL into a string
+            Log.d(TAG, "Fetching data from: " + url);
+
             StringBuilder jsonBuilder = new StringBuilder();
+
+            URLConnection connection = url.openConnection();
+            connection.setConnectTimeout(10000);
+            connection.setReadTimeout(5000);
             BufferedReader in =
-                new BufferedReader(new InputStreamReader(url.openStream()), 1024);
+                new BufferedReader(new InputStreamReader(connection.getInputStream()), 1024);
             try {
                 String data;
                 while ((data = in.readLine()) != null) {
@@ -147,8 +164,7 @@ public class ThermometerWidget extends AppWidgetProvider {
             return jsonBuilder.toString();
         }
 
-        @Override
-        protected void onPostExecute(JSONObject weatherObservation) {
+        private void updateUi(JSONObject weatherObservation) {
             String degrees = "--";
 
             if (weatherObservation != null) {
@@ -164,7 +180,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                             weatherObservation.getString("stationName")));
 
                     SharedPreferences preferences =
-                        PreferenceManager.getDefaultSharedPreferences(context);
+                        PreferenceManager.getDefaultSharedPreferences(this);
                     if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
                         double farenheit = centigrades * 9.0 / 5.0 + 32.0;
                         degrees = Long.toString(Math.round(farenheit));
@@ -180,12 +196,14 @@ public class ThermometerWidget extends AppWidgetProvider {
                 new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                     R.layout.main);
             AppWidgetManager appWidgetManager =
-                AppWidgetManager.getInstance(context);
+                AppWidgetManager.getInstance(this);
 
             remoteViews.setTextViewText(R.id.TextView, degrees + "°");
             for (int widgetId : appWidgetIds) {
                 appWidgetManager.updateAppWidget(widgetId, remoteViews);
             }
+
+            Log.d(TAG, "UI updated");
         }
     }
 
@@ -224,18 +242,7 @@ public class ThermometerWidget extends AppWidgetProvider {
      */
     public static void update(Context context) {
         Log.d(TAG, "update() called");
-
-        boolean alreadyFetching = false;
-        if (temperatureFetcher != null) {
-            AsyncTask.Status fetchStatus = temperatureFetcher.getStatus();
-            Log.d(TAG, "Current temperature fetcher is " + fetchStatus);
-            alreadyFetching = fetchStatus != AsyncTask.Status.FINISHED;
-        }
-        if (!alreadyFetching) {
-            // No previous fetch running, let's do it again!
-            temperatureFetcher = new TemperatureFetcher(context);
-            temperatureFetcher.execute();
-        }
+        context.startService(new Intent(context, TemperatureFetcher.class));
     }
 
     @Override

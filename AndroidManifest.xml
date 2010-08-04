@@ -17,6 +17,7 @@
         <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
     </intent-filter>
 </activity>
+<service android:name="ThermometerWidget$TemperatureFetcher"></service>
 </application>
 
 
