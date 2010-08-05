@@ -191,7 +191,7 @@ public class ThermometerWidget extends AppWidgetProvider {
     /**
      * Listens for events and requests widget updates as required.
      */
-    private UpdateListener updateListener;
+    private static UpdateListener updateListener;
 
     /**
      * Listens for events and requests widget updates as required.
@@ -202,12 +202,16 @@ public class ThermometerWidget extends AppWidgetProvider {
         private Context context;
 
         public UpdateListener(Context context) {
+            if (context == null) {
+                throw new NullPointerException("context must be non-null");
+            }
             this.context = context;
         }
 
         public void onSharedPreferenceChanged(SharedPreferences preferences,
             String key)
         {
+            Log.d(TAG, "Preference changed, updating UI: " + key);
             updateUi(context);
         }
     }
@@ -235,17 +239,20 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     @Override
-    public void onUpdate(Context context, AppWidgetManager appWidgetManager,
+    public synchronized void onUpdate(Context context, AppWidgetManager appWidgetManager,
         int[] updatedAppWidgetIds)
     {
-        Log.d(TAG, "onUpdate() called with ids: "
+        Log.d(TAG, "onUpdate() called with widget ids: "
             + Arrays.toString(updatedAppWidgetIds));
 
         if (updateListener == null) {
+            Log.d(TAG, "Registering a new preferences change notification listener");
             updateListener = new UpdateListener(context);
             SharedPreferences preferences =
                 PreferenceManager.getDefaultSharedPreferences(context);
             preferences.registerOnSharedPreferenceChangeListener(updateListener);
+        } else {
+            Log.d(TAG, "Not touching existing preferences change notification listener");
         }
 
         for (int updatedId : updatedAppWidgetIds) {
@@ -331,8 +338,7 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     @Override
-    public void onReceive(Context context, Intent intent) {
-        Log.d(TAG, "onReceive() called");
+    public synchronized void onReceive(Context context, Intent intent) {
         // v1.5 fix that doesn't call onDelete Action
         final String action = intent.getAction();
         if (AppWidgetManager.ACTION_APPWIDGET_DELETED.equals(action)) {
@@ -350,23 +356,34 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     @Override
-    public void onDeleted(Context context, int[] deletedIds) {
-        Log.d(TAG, "onDeleted() called");
+    public synchronized void onDeleted(Context context, int[] deletedIds) {
+        Log.d(TAG, "onDeleted() called with widget ids: " +
+            Arrays.toString(deletedIds));
+
+        if (updateListener == null) {
+            Log.w(TAG, "No preference change listener found, should have been registered in onUpdate()");
+        }
 
         // Forget deleted widget IDs
         for (Integer deletedId : deletedIds) {
-            appWidgetIds.remove(deletedId);
-
-            Log.d(TAG, "Forgetting deleted widget " + deletedId);
+            if (appWidgetIds.contains(deletedId)) {
+                Log.d(TAG, "Forgetting deleted widget: " + deletedId);
+                appWidgetIds.remove(deletedId);
+            } else {
+                Log.w(TAG, "Can't forget unknown widget: " + deletedId);
+            }
         }
         Log.d(TAG, "Still active widgets: " + appWidgetIds);
 
-        if (appWidgetIds.isEmpty() && updateListener != null) {
-            Log.d(TAG, "No more widgets left, deregistering preferences listener");
-            SharedPreferences preferences =
-                PreferenceManager.getDefaultSharedPreferences(context);
-            preferences.unregisterOnSharedPreferenceChangeListener(updateListener);
-            updateListener = null;
+        if (appWidgetIds.isEmpty()) {
+            Log.d(TAG, "No more widgets left...");
+            if (updateListener != null) {
+                Log.d(TAG, "Deregistering preferences change listener...");
+                SharedPreferences preferences =
+                    PreferenceManager.getDefaultSharedPreferences(context);
+                preferences.unregisterOnSharedPreferenceChangeListener(updateListener);
+                updateListener = null;
+            }
         }
 
         super.onDeleted(context, deletedIds);
