@@ -34,13 +34,31 @@ public class ThermometerWidget extends AppWidgetProvider {
      */
     public static final String TAG = "ThermWidget";
 
+    /**
+     * The widget IDs that we know about.
+     */
     private static Set<Integer> appWidgetIds = new HashSet<Integer>();
+
+    /**
+     * The latest weather measurement.
+     * <p>
+     * You must synchronize on {@link #weatherLock} before accessing this.
+     */
+    private static JSONObject weather;
+
+    /**
+     * You need to synchronize on this before accessing the {@link #weather}.
+     */
+    private static Object weatherLock = new Object();
 
     /**
      * A background task fetching the current outdoor temperature from the
      * Internet.
      */
     public static class TemperatureFetcher extends IntentService {
+        /**
+         * Construct a new temperature fetcher.
+         */
         public TemperatureFetcher() {
             super("Temperature Fetcher");
         }
@@ -48,13 +66,18 @@ public class ThermometerWidget extends AppWidgetProvider {
         @Override
         protected void onHandleIntent(Intent intent) {
             try {
-                JSONObject weather = fetchWeather();
-                updateUi(weather);
+                ThermometerWidget.setWeather(fetchWeather());
+                updateUi(this);
             } catch (Throwable t) {
                 Log.e(TAG, "Fetching / updating weather failed", t);
             }
         }
 
+        /**
+         * Fetch the weather for the current location.
+         *
+         * @return A JSON object with information from the nearest weather station.
+         */
         private JSONObject fetchWeather() {
             double latitude = 59.3190;
             double longitude = 18.0518;
@@ -118,8 +141,8 @@ public class ThermometerWidget extends AppWidgetProvider {
             }
 
             try {
-                JSONObject weather = new JSONObject(jsonString);
-                return weather.getJSONObject("weatherObservation");
+                JSONObject weatherObservation = new JSONObject(jsonString);
+                return weatherObservation.getJSONObject("weatherObservation");
             } catch (JSONException e) {
                 Log.e(TAG, "Parsing weather data failed:\n"
                     + jsonString, e);
@@ -163,47 +186,51 @@ public class ThermometerWidget extends AppWidgetProvider {
             }
             return jsonBuilder.toString();
         }
+    }
 
-        private void updateUi(JSONObject weatherObservation) {
-            String degrees = "--";
+    /**
+     * Listens for events and requests widget updates as required.
+     */
+    private UpdateListener updateListener;
 
-            if (weatherObservation != null) {
-                try {
-                    double centigrades =
-                        weatherObservation.getInt("temperature");
-                    degrees = Long.toString(Math.round(centigrades));
-                    Log.d(TAG,
-                        String.format("Got %dC, %dkts observed %sUTC at %s",
-                            Math.round(centigrades),
-                            weatherObservation.getInt("windSpeed"),
-                            weatherObservation.getString("datetime"),
-                            weatherObservation.getString("stationName")));
+    /**
+     * Listens for events and requests widget updates as required.
+     */
+    private static class UpdateListener
+    implements SharedPreferences.OnSharedPreferenceChangeListener
+    {
+        private Context context;
 
-                    SharedPreferences preferences =
-                        PreferenceManager.getDefaultSharedPreferences(this);
-                    if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
-                        double farenheit = centigrades * 9.0 / 5.0 + 32.0;
-                        degrees = Long.toString(Math.round(farenheit));
-                    }
-                } catch (JSONException e) {
-                    Log.e(TAG, "Parsing weather data failed:\n"
-                        + weatherObservation, e);
-                }
-            }
+        public UpdateListener(Context context) {
+            this.context = context;
+        }
 
-            // Publish the fetched temperature
-            RemoteViews remoteViews =
-                new RemoteViews(ThermometerWidget.class.getPackage().getName(),
-                    R.layout.main);
-            AppWidgetManager appWidgetManager =
-                AppWidgetManager.getInstance(this);
+        public void onSharedPreferenceChanged(SharedPreferences preferences,
+            String key)
+        {
+            updateUi(context);
+        }
+    }
 
-            remoteViews.setTextViewText(R.id.TextView, degrees + "°");
-            for (int widgetId : appWidgetIds) {
-                appWidgetManager.updateAppWidget(widgetId, remoteViews);
-            }
+    /**
+     * Update with the latest weather observation.
+     *
+     * @param weather A current weather observation.
+     */
+    public static void setWeather(JSONObject weather) {
+        synchronized (weatherLock) {
+            ThermometerWidget.weather = weather;
+        }
+    }
 
-            Log.d(TAG, "UI updated");
+    /**
+     * Fetch the most recently known weather observation.
+     *
+     * @return The latest known weather observation.
+     */
+    public static JSONObject getWeather() {
+        synchronized (weatherLock) {
+            return ThermometerWidget.weather;
         }
     }
 
@@ -214,9 +241,19 @@ public class ThermometerWidget extends AppWidgetProvider {
         Log.d(TAG, "onUpdate() called with ids: "
             + Arrays.toString(updatedAppWidgetIds));
 
+        if (updateListener == null) {
+            updateListener = new UpdateListener(context);
+            SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+            preferences.registerOnSharedPreferenceChangeListener(updateListener);
+        }
+
         for (int updatedId : updatedAppWidgetIds) {
             appWidgetIds.add(updatedId);
         }
+
+        // Show some UI as quickly as possible
+        updateUi(context);
 
         // Tell all widgets to launch the preferences activity on click
         for (int id : appWidgetIds) {
@@ -234,15 +271,63 @@ public class ThermometerWidget extends AppWidgetProvider {
             // Tell the AppWidgetManager to go live with the new pending intent
             appWidgetManager.updateAppWidget(id, views);
         }
-        update(context);
+
+        updateMeasurement(context);
     }
 
     /**
-     * Update what the widget displays.
+     * Take a new weather measurement for the widget to display.
      */
-    public static void update(Context context) {
-        Log.d(TAG, "update() called");
+    public static void updateMeasurement(Context context) {
+        Log.d(TAG, "Initiating new weather observation fetch...");
         context.startService(new Intent(context, TemperatureFetcher.class));
+    }
+
+    /**
+     * Refresh the widget display.
+     */
+    public static void updateUi(Context context) {
+        Log.d(TAG, "Updating widget display...");
+        JSONObject weatherObservation = getWeather();
+
+        String degrees = "--";
+        if (weatherObservation != null) {
+            try {
+                double centigrades =
+                    weatherObservation.getInt("temperature");
+                degrees = Long.toString(Math.round(centigrades));
+                Log.d(TAG,
+                    String.format("Weather data is %dC, %dkts observed %sUTC at %s",
+                        Math.round(centigrades),
+                        weatherObservation.getInt("windSpeed"),
+                        weatherObservation.getString("datetime"),
+                        weatherObservation.getString("stationName")));
+
+                SharedPreferences preferences =
+                    PreferenceManager.getDefaultSharedPreferences(context);
+                if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
+                    double farenheit = centigrades * 9.0 / 5.0 + 32.0;
+                    degrees = Long.toString(Math.round(farenheit));
+                }
+            } catch (JSONException e) {
+                Log.e(TAG, "Parsing weather data failed:\n"
+                    + weatherObservation, e);
+            }
+        }
+
+        // Publish the fetched temperature
+        RemoteViews remoteViews =
+            new RemoteViews(ThermometerWidget.class.getPackage().getName(),
+                R.layout.main);
+        AppWidgetManager appWidgetManager =
+            AppWidgetManager.getInstance(context);
+
+        remoteViews.setTextViewText(R.id.TextView, degrees + "°");
+        for (int widgetId : appWidgetIds) {
+            appWidgetManager.updateAppWidget(widgetId, remoteViews);
+        }
+
+        Log.d(TAG, "UI updated");
     }
 
     @Override
@@ -275,6 +360,14 @@ public class ThermometerWidget extends AppWidgetProvider {
             Log.d(TAG, "Forgetting deleted widget " + deletedId);
         }
         Log.d(TAG, "Still active widgets: " + appWidgetIds);
+
+        if (appWidgetIds.isEmpty() && updateListener != null) {
+            Log.d(TAG, "No more widgets left, deregistering preferences listener");
+            SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+            preferences.unregisterOnSharedPreferenceChangeListener(updateListener);
+            updateListener = null;
+        }
 
         super.onDeleted(context, deletedIds);
     }
