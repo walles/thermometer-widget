@@ -19,6 +19,12 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.location.LocationProvider;
+import android.os.Build;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -52,6 +58,16 @@ public class ThermometerWidget extends AppWidgetProvider {
     private static Object weatherLock = new Object();
 
     /**
+     * Our last known position.
+     */
+    private static Location location;
+
+    /**
+     * You need to synchronize on this before accessing the {@link #location}.
+     */
+    private static Object locationLock = new Object();
+
+    /**
      * A background task fetching the current outdoor temperature from the
      * Internet.
      */
@@ -79,8 +95,15 @@ public class ThermometerWidget extends AppWidgetProvider {
          * @return A JSON object with information from the nearest weather station.
          */
         private JSONObject fetchWeather() {
-            double latitude = 59.3190;
-            double longitude = 18.0518;
+            Location currentLocation = ThermometerWidget.getLocation();
+            if (currentLocation == null) {
+                // We don't know where we are
+                Log.w(TAG, "We don't know where we are, can't ask for any weather observation");
+                return null;
+            }
+
+            double latitude = currentLocation.getLatitude();
+            double longitude = currentLocation.getLongitude();
 
             // Create something like:
             // http://ws.geonames.org/findNearByWeatherJSON?lat=43&lng=-2
@@ -197,29 +220,133 @@ public class ThermometerWidget extends AppWidgetProvider {
      * Listens for events and requests widget updates as required.
      */
     private static class UpdateListener
-    implements SharedPreferences.OnSharedPreferenceChangeListener
+    implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     {
         private Context context;
+
+        /**
+         * Find out if we're running on emulated hardware.
+         *
+         * @return true if we're running on the emulator, false otherwise
+         */
+        private boolean isRunningOnEmulator() {
+            return "unknown".equals(Build.BOARD);
+        }
 
         public UpdateListener(Context context) {
             if (context == null) {
                 throw new NullPointerException("context must be non-null");
             }
             this.context = context;
+
+            Log.d(TAG, "Registering location listener");
+            LocationManager locationManager = getLocationManager();
+
+            // Set up an initial location, this will often be good enough
+            Location lastKnownLocation =
+                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            if (lastKnownLocation == null && isRunningOnEmulator()) {
+                // If we're on emulated hardware we're most likely to be at Johan's place
+                lastKnownLocation = new Location("Johan");
+                lastKnownLocation.setLatitude(59.3190);
+                lastKnownLocation.setLongitude(18.0518);
+            }
+            setLocation(lastKnownLocation);
+
+            locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                47 * 60 * 1000, // Drift a bit relative to the periodic widget update
+                50000, // Every 50km we move
+                this);
+
+            Log.d(TAG, "Registering preferences change notification listener");
+            SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+            preferences.registerOnSharedPreferenceChangeListener(this);
+        }
+
+        /**
+         * Get a non-null location manager.
+         *
+         * @return A non-null location manager.
+         *
+         * @throws RuntimeException if the location manager cannot be found.
+         */
+        private LocationManager getLocationManager() {
+            LocationManager locationManager =
+                (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
+            if (locationManager == null) {
+                throw new RuntimeException("Location manager not found, cannot continue");
+            }
+            return locationManager;
         }
 
         public void onSharedPreferenceChanged(SharedPreferences preferences,
             String key)
         {
+            getLocationManager().removeUpdates(this);
+
             Log.d(TAG, "Preference changed, updating UI: " + key);
             updateUi(context);
+        }
+
+        /**
+         * Free up system resources and stop listening.
+         */
+        public void close() {
+            Log.d(TAG, "Deregistering preferences change listener...");
+            SharedPreferences preferences =
+                PreferenceManager.getDefaultSharedPreferences(context);
+            preferences.unregisterOnSharedPreferenceChangeListener(this);
+        }
+
+        public void onLocationChanged(Location networkLocation) {
+            ThermometerWidget.setLocation(networkLocation);
+            ThermometerWidget.updateMeasurement(context);
+        }
+
+        public void onProviderDisabled(String provider) {
+            if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
+                Log.e(TAG, "Location provider disabled: " + provider);
+                // FIXME: What do we do about this?
+            }
+        }
+
+        public void onProviderEnabled(String provider) {
+            if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
+                Log.i(TAG, "Location provider enabled: " + provider);
+            }
+        }
+
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+            if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
+                switch (status) {
+                case LocationProvider.AVAILABLE:
+                    Log.d(TAG, "Location provider available: " + provider);
+                    break;
+                case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                    Log.w(TAG, "Location provider temporarily unavailable: "
+                        + provider);
+                    break;
+                case LocationProvider.OUT_OF_SERVICE:
+                    // FIXME: What do we do about this?
+                    Log.e(TAG, "Location provider out of service: "
+                        + provider);
+                    break;
+                default:
+                    Log.w(TAG, "Location provider switched to unknown status "
+                        + status
+                        + ": "
+                        + provider);
+                }
+            }
         }
     }
 
     /**
-     * Update with the latest weather observation.
+     * Tell us what the weather is like.
      *
-     * @param weather A current weather observation.
+     * @param weather What the weather is like.
      */
     public static void setWeather(JSONObject weather) {
         synchronized (weatherLock) {
@@ -228,13 +355,35 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     /**
-     * Fetch the most recently known weather observation.
+     * What's the weather like around here?
      *
-     * @return The latest known weather observation.
+     * @return What the weather is like around here.
      */
     public static JSONObject getWeather() {
         synchronized (weatherLock) {
             return ThermometerWidget.weather;
+        }
+    }
+
+    /**
+     * Tell us where we are.
+     *
+     * @param location Where we are.
+     */
+    public static void setLocation(Location location) {
+        synchronized (locationLock) {
+            ThermometerWidget.location = location;
+        }
+    }
+
+    /**
+     * Where are we?
+     *
+     * @return Where we are.
+     */
+    public static Location getLocation() {
+        synchronized (locationLock) {
+            return ThermometerWidget.location;
         }
     }
 
@@ -246,11 +395,7 @@ public class ThermometerWidget extends AppWidgetProvider {
             + Arrays.toString(updatedAppWidgetIds));
 
         if (updateListener == null) {
-            Log.d(TAG, "Registering a new preferences change notification listener");
             updateListener = new UpdateListener(context);
-            SharedPreferences preferences =
-                PreferenceManager.getDefaultSharedPreferences(context);
-            preferences.registerOnSharedPreferenceChangeListener(updateListener);
         } else {
             Log.d(TAG, "Not touching existing preferences change notification listener");
         }
@@ -378,10 +523,7 @@ public class ThermometerWidget extends AppWidgetProvider {
         if (appWidgetIds.isEmpty()) {
             Log.d(TAG, "No more widgets left...");
             if (updateListener != null) {
-                Log.d(TAG, "Deregistering preferences change listener...");
-                SharedPreferences preferences =
-                    PreferenceManager.getDefaultSharedPreferences(context);
-                preferences.unregisterOnSharedPreferenceChangeListener(updateListener);
+                updateListener.close();
                 updateListener = null;
             }
         }
