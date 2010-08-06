@@ -246,7 +246,8 @@ public class ThermometerWidget extends AppWidgetProvider {
             Location lastKnownLocation =
                 locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
             if (lastKnownLocation == null && isRunningOnEmulator()) {
-                // If we're on emulated hardware we're most likely to be at Johan's place
+                Log.i(TAG,
+                    "Location unknown but running on emulator, hard coding coordinates to Johan's place");
                 lastKnownLocation = new Location("Johan");
                 lastKnownLocation.setLatitude(59.3190);
                 lastKnownLocation.setLongitude(18.0518);
@@ -447,16 +448,45 @@ public class ThermometerWidget extends AppWidgetProvider {
             try {
                 double centigrades =
                     weatherObservation.getInt("temperature");
+                double windKnots = weatherObservation.getDouble("windSpeed");
                 degrees = Long.toString(Math.round(centigrades));
                 Log.d(TAG,
                     String.format("Weather data is %dC, %dkts observed %sUTC at %s",
                         Math.round(centigrades),
-                        weatherObservation.getInt("windSpeed"),
+                        Math.round(windKnots),
                         weatherObservation.getString("datetime"),
                         weatherObservation.getString("stationName")));
 
                 SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(context);
+
+                if (preferences.getBoolean("windChillPref", false)) {
+                    double windKmh = 1.85 * windKnots;
+
+                    // From: http://en.wikipedia.org/wiki/Wind_chill#North_American_wind_chill_index
+                    if (centigrades > 10.0) {
+                        Log.d(TAG, "Not computing wind chill over 10C: "
+                            + Math.round(centigrades) + "C");
+                    } else if (windKmh < 4.8) {
+                        Log.d(TAG, "Not computing wind chill under 4.8km/h: "
+                            + Math.round(windKmh) + "km/h");
+                    } else {
+                        double windKmhTo0_16 = Math.pow(windKmh, 0.16);
+                        centigrades =
+                            13.12
+                            + 0.6215 * centigrades
+                            - 11.37 *  windKmhTo0_16
+                            + 0.3965 * centigrades * windKmhTo0_16;
+
+                        Log.d(TAG,
+                            "Temperature adjusted for wind chill to "
+                            + Math.round(centigrades) + "C");
+                    }
+                } else {
+                    Log.d(TAG, "Wind chill calculations not enabled, sticking to "
+                        + Math.round(centigrades) + "C");
+                }
+
                 if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
                     double farenheit = centigrades * 9.0 / 5.0 + 32.0;
                     degrees = Long.toString(Math.round(farenheit));
