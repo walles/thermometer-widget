@@ -3,9 +3,10 @@
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    >
+    android:id="@+id/AllOfIt">
 <TextView
     android:layout_width="fill_parent" 
-    android:text="--°" android:textColor="#fff" android:shadowColor="#000" android:shadowRadius="5.0" android:id="@+id/TextView" android:textSize="40dip" android:gravity="center" android:layout_height="fill_parent" android:clickable="true" android:visibility="visible"/>
+    android:text="--°" android:textColor="#fff" android:shadowColor="#000" android:shadowRadius="5.0" android:textSize="40dip" android:gravity="center" android:clickable="true" android:layout_height="wrap_content" android:layout_weight="1" android:id="@+id/TemperatureView"/>
 
+<TextView android:textColor="#fff" android:shadowColor="#000" android:shadowRadius="5.0" android:layout_height="wrap_content" android:layout_width="fill_parent" android:id="@+id/MetadataView" android:textSize="10dip" android:gravity="center" android:maxLines="4"></TextView>
 </LinearLayout>

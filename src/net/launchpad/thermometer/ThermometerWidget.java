@@ -7,8 +7,14 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -417,9 +423,9 @@ public class ThermometerWidget extends AppWidgetProvider {
             PendingIntent pendingIntent =
                 PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            // Get the layout for the App Widget and attach an on-click listener to the button
+            // Get the layout for the App Widget and attach an on-click listener to the widget
             RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.main);
-            views.setOnClickPendingIntent(R.id.TextView, pendingIntent);
+            views.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
 
             // Tell the AppWidgetManager to go live with the new pending intent
             appWidgetManager.updateAppWidget(id, views);
@@ -437,6 +443,44 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     /**
+     * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
+     */
+    private final static Pattern DATE_PARSE =
+        Pattern.compile("([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)");
+
+    /**
+     * Convert a string to a Calendar object.
+     *
+     * @param timeString An UTC time stamp in the following format: "2010-07-29 10:20:00"
+     *
+     * @return A calendar object representing the same time as the timeString
+     *
+     * @throws RuntimeException if the string cannot be parsed
+     */
+    private static Calendar parseDateTime(String timeString) {
+        Matcher match = DATE_PARSE.matcher(timeString);
+        if (!match.matches()) {
+            throw new RuntimeException("Can't parse time string: " + timeString);
+        }
+
+        int year = Integer.valueOf(match.group(1));
+        int month = Integer.valueOf(match.group(2));
+        int day = Integer.valueOf(match.group(3));
+
+        int hour = Integer.valueOf(match.group(4));
+        int minute = Integer.valueOf(match.group(5));
+        int second = Integer.valueOf(match.group(6));
+
+        Calendar utcCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+        utcCalendar.set(year, month, day, hour, minute, second);
+
+        // Convert from UTC to the local time zone
+        Calendar calendar = new GregorianCalendar();
+        calendar.setTime(utcCalendar.getTime());
+        return calendar;
+    }
+
+    /**
      * Refresh the widget display.
      */
     public static void updateUi(Context context) {
@@ -444,12 +488,21 @@ public class ThermometerWidget extends AppWidgetProvider {
         JSONObject weatherObservation = getWeather();
 
         String degrees = "--";
+        String metadata = "";
         if (weatherObservation != null) {
             try {
                 double centigrades =
                     weatherObservation.getInt("temperature");
                 double windKnots = weatherObservation.getDouble("windSpeed");
                 degrees = Long.toString(Math.round(centigrades));
+                Calendar date =
+                    parseDateTime(weatherObservation.getString("datetime"));
+                metadata =
+                    String.format("%02d:%02d %s",
+                        date.get(Calendar.HOUR_OF_DAY),
+                        date.get(Calendar.MINUTE),
+                        weatherObservation.getString("stationName"));
+
                 Log.d(TAG,
                     String.format("Weather data is %dC, %dkts observed %sUTC at %s",
                         Math.round(centigrades),
@@ -504,7 +557,8 @@ public class ThermometerWidget extends AppWidgetProvider {
         AppWidgetManager appWidgetManager =
             AppWidgetManager.getInstance(context);
 
-        remoteViews.setTextViewText(R.id.TextView, degrees + "°");
+        remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
+        remoteViews.setTextViewText(R.id.MetadataView, metadata);
         for (int widgetId : appWidgetIds) {
             appWidgetManager.updateAppWidget(widgetId, remoteViews);
         }
