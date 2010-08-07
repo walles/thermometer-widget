@@ -54,14 +54,15 @@ public class ThermometerWidget extends AppWidgetProvider {
     /**
      * The latest weather measurement.
      * <p>
-     * You must synchronize on {@link #weatherLock} before accessing this.
+     * You must synchronize on {@link #lock} before accessing this.
      */
     private static JSONObject weather;
 
     /**
-     * You need to synchronize on this before accessing the {@link #weather}.
+     * You need to synchronize on this before accessing the {@link #weather} or
+     * the {@link #location}.
      */
-    private static Object weatherLock = new Object();
+    private static Object lock = new Object();
 
     /**
      * Our last known position.
@@ -69,9 +70,14 @@ public class ThermometerWidget extends AppWidgetProvider {
     private static Location location;
 
     /**
-     * You need to synchronize on this before accessing the {@link #location}.
+     * How we're currently doing on getting a good temperature reading for
+     * the user.
      */
-    private static Object locationLock = new Object();
+    private static String status;
+
+    static {
+        setStatus(null, "Initializing...");
+    }
 
     /**
      * A background task fetching the current outdoor temperature from the
@@ -92,6 +98,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                 updateUi(this);
             } catch (Throwable t) {
                 Log.e(TAG, "Fetching / updating weather failed", t);
+                setStatus(this, "Error fetching temperature");
             }
         }
 
@@ -105,6 +112,9 @@ public class ThermometerWidget extends AppWidgetProvider {
             if (currentLocation == null) {
                 // We don't know where we are
                 Log.w(TAG, "We don't know where we are, can't ask for any weather observation");
+
+                // Just return without doing setStatus() here; we don't want to
+                // over-write any explanation from the location listener
                 return null;
             }
 
@@ -127,6 +137,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                 Log.v(TAG, "JSON URL created: " + url);
             } catch (MalformedURLException e) {
                 Log.e(TAG, "Internal error creating JSON URL from: " + urlString, e);
+                setStatus(this, "Internal error JSON URL");
                 return null;
             }
 
@@ -146,6 +157,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                         retryString =
                             ", will retry in " + (delayMs / 1000L) + "s";
                     }
+                    setStatus(this, "Service error" + retryString);
                     Log.w(TAG, "Error reading weather data on attempt "
                         + attempt + retryString + ": " + url,
                         e);
@@ -175,6 +187,7 @@ public class ThermometerWidget extends AppWidgetProvider {
             } catch (JSONException e) {
                 Log.e(TAG, "Parsing weather data failed:\n"
                     + jsonString, e);
+                setStatus(this, "Error parsing weather data");
                 return null;
             }
         }
@@ -258,7 +271,11 @@ public class ThermometerWidget extends AppWidgetProvider {
                 lastKnownLocation.setLatitude(59.3190);
                 lastKnownLocation.setLongitude(18.0518);
             }
-            setLocation(lastKnownLocation);
+            if (lastKnownLocation != null) {
+                setLocation(lastKnownLocation);
+            } else {
+                setStatus(context, "Locating phone...");
+            }
 
             locationManager.requestLocationUpdates(
                 LocationManager.NETWORK_PROVIDER,
@@ -283,6 +300,7 @@ public class ThermometerWidget extends AppWidgetProvider {
             LocationManager locationManager =
                 (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
             if (locationManager == null) {
+                setStatus(context, "Location unavailable");
                 throw new RuntimeException("Location manager not found, cannot continue");
             }
             return locationManager;
@@ -315,13 +333,14 @@ public class ThermometerWidget extends AppWidgetProvider {
         public void onProviderDisabled(String provider) {
             if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
                 Log.e(TAG, "Location provider disabled: " + provider);
-                // FIXME: What do we do about this?
+                setStatus(context, "Location services disabled");
             }
         }
 
         public void onProviderEnabled(String provider) {
             if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
                 Log.i(TAG, "Location provider enabled: " + provider);
+                setStatus(context, "Locating phone...");
             }
         }
 
@@ -336,9 +355,9 @@ public class ThermometerWidget extends AppWidgetProvider {
                         + provider);
                     break;
                 case LocationProvider.OUT_OF_SERVICE:
-                    // FIXME: What do we do about this?
                     Log.e(TAG, "Location provider out of service: "
                         + provider);
+                    setStatus(context, "Location services unavailable");
                     break;
                 default:
                     Log.w(TAG, "Location provider switched to unknown status "
@@ -356,7 +375,7 @@ public class ThermometerWidget extends AppWidgetProvider {
      * @param weather What the weather is like.
      */
     public static void setWeather(JSONObject weather) {
-        synchronized (weatherLock) {
+        synchronized (lock) {
             ThermometerWidget.weather = weather;
         }
     }
@@ -367,7 +386,7 @@ public class ThermometerWidget extends AppWidgetProvider {
      * @return What the weather is like around here.
      */
     public static JSONObject getWeather() {
-        synchronized (weatherLock) {
+        synchronized (lock) {
             return ThermometerWidget.weather;
         }
     }
@@ -378,7 +397,7 @@ public class ThermometerWidget extends AppWidgetProvider {
      * @param location Where we are.
      */
     public static void setLocation(Location location) {
-        synchronized (locationLock) {
+        synchronized (lock) {
             ThermometerWidget.location = location;
         }
     }
@@ -389,8 +408,41 @@ public class ThermometerWidget extends AppWidgetProvider {
      * @return Where we are.
      */
     public static Location getLocation() {
-        synchronized (locationLock) {
+        synchronized (lock) {
             return ThermometerWidget.location;
+        }
+    }
+
+    /**
+     * How are we doing on fetching the weather?
+     *
+     * @param context If non-null, the new status will become visible in the UI
+     * immediately.
+     *
+     * @param status A status string.
+     */
+    public static void setStatus(Context context, String status) {
+        synchronized (lock) {
+            Calendar now = new GregorianCalendar();
+            ThermometerWidget.status =  String.format("%02d:%02d %s",
+                now.get(Calendar.HOUR_OF_DAY),
+                now.get(Calendar.MINUTE),
+                status);
+        }
+
+        if (context != null) {
+            updateUi(context);
+        }
+    }
+
+    /**
+     * How are we doing on fetching the weather?
+     *
+     * @return A status string.
+     */
+    public static String getStatus() {
+        synchronized (lock) {
+            return ThermometerWidget.status;
         }
     }
 
@@ -488,7 +540,7 @@ public class ThermometerWidget extends AppWidgetProvider {
         JSONObject weatherObservation = getWeather();
 
         String degrees = "--";
-        String metadata = "";
+        String metadata = getStatus();
         if (weatherObservation != null) {
             try {
                 double centigrades =
@@ -554,11 +606,11 @@ public class ThermometerWidget extends AppWidgetProvider {
         RemoteViews remoteViews =
             new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                 R.layout.main);
-        AppWidgetManager appWidgetManager =
-            AppWidgetManager.getInstance(context);
-
         remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
+
+        AppWidgetManager appWidgetManager =
+            AppWidgetManager.getInstance(context);
         for (int widgetId : appWidgetIds) {
             appWidgetManager.updateAppWidget(widgetId, remoteViews);
         }
