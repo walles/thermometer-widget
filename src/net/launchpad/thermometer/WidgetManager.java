@@ -311,6 +311,12 @@ public class WidgetManager extends Service {
         remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
 
+        // Tell widget to launch the preferences activity on click
+        Intent intent = new Intent(this, ThermometerConfigure.class);
+        PendingIntent pendingIntent =
+            PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        remoteViews.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
+
         AppWidgetManager appWidgetManager =
             AppWidgetManager.getInstance(this);
         synchronized (lock) {
@@ -346,26 +352,6 @@ public class WidgetManager extends Service {
 
             // Show some UI as quickly as possible
             updateUi();
-
-            // Tell all widgets to launch the preferences activity on click
-            AppWidgetManager appWidgetManager =
-                AppWidgetManager.getInstance(this);
-            for (int id : appWidgetIds) {
-                Log.d(TAG,
-                    "Registering onClick() listener for widget " + id);
-
-                // Create an Intent to launch the preferences activity
-                Intent intent = new Intent(this, ThermometerConfigure.class);
-                PendingIntent pendingIntent =
-                    PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-                // Get the layout for the App Widget and attach an on-click listener to the widget
-                RemoteViews views = new RemoteViews(getPackageName(), R.layout.main);
-                views.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
-
-                // Tell the AppWidgetManager to go live with the new pending intent
-                appWidgetManager.updateAppWidget(id, views);
-            }
 
             updateMeasurement();
         }

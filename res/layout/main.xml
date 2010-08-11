@@ -1,12 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:id="@+id/AllOfIt">
-<TextView
-    android:layout_width="fill_parent" 
-    android:text="--°" android:textColor="#fff" android:shadowColor="#000" android:shadowRadius="5.0" android:textSize="40dip" android:gravity="center" android:clickable="true" android:layout_height="wrap_content" android:layout_weight="1" android:id="@+id/TemperatureView"/>
+              android:orientation="vertical"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              android:id="@+id/AllOfIt">
+  <TextView
+     android:id="@+id/TemperatureView"
+     android:layout_width="fill_parent" 
+     android:layout_height="wrap_content"
+     android:layout_weight="1"
+     
+     android:text="--°"
+     
+     android:textColor="#fff"
+     android:shadowColor="#000"
+     android:shadowRadius="5.0"
+     android:textSize="40dip"
+     android:gravity="center"
+     />
 
-<TextView android:textColor="#fff" android:shadowColor="#000" android:shadowRadius="5.0" android:layout_height="wrap_content" android:layout_width="fill_parent" android:id="@+id/MetadataView" android:textSize="10dip" android:gravity="center" android:maxLines="4"></TextView>
+  <TextView
+     android:id="@+id/MetadataView"
+     android:layout_width="fill_parent"
+     android:layout_height="wrap_content"
+     
+     android:textColor="#fff"
+     android:shadowColor="#000"
+     android:shadowRadius="5.0"
+     android:textSize="10dip"
+     android:gravity="center"
+     
+     android:maxLines="4"
+     />
 </LinearLayout>

@@ -21,9 +21,9 @@ public class ThermometerWidget extends AppWidgetProvider {
     public synchronized void onUpdate(
         Context context,
         AppWidgetManager appWidgetManager,
-        int[] updatedAppWidgetIds)
+        int[] appWidgetIds)
     {
-        WidgetManager.onUpdate(context, updatedAppWidgetIds);
+        WidgetManager.onUpdate(context, appWidgetIds);
     }
 
     @Override
