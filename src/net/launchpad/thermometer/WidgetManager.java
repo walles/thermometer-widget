@@ -111,7 +111,7 @@ public class WidgetManager extends Service {
         context.startService(intent);
     }
 
-    private final static String DELETED_IDS_EXTRA = "updatedIds";
+    private final static String DELETED_IDS_EXTRA = "deletedIds";
 
     /**
      * Delete widgets.
