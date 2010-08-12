@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
@@ -75,9 +76,22 @@ public class WidgetManager extends Service {
     private TemperatureFetcher temperatureFetcher;
 
     /**
+     * This will be called regularly by the {@link AlarmManager}.
+     */
+    private PendingIntent updateIntent;
+
+    /**
+     * Marker field to say that this is an update requested by the
+     * {@link AlarmManager}.
+     */
+    private final static String ALARM_CALL = "AlarmManager says hello";
+
+    /**
      * Create a new widget manager.
      */
     public WidgetManager() {
+        super();
+
         setStatus("Initializing...");
 
         temperatureFetcher = new TemperatureFetcher(this);
@@ -350,11 +364,28 @@ public class WidgetManager extends Service {
                 appWidgetIds.add(updatedId);
             }
 
-            // Show some UI as quickly as possible
-            updateUi();
+            if (updateIntent == null) {
+                // Set up repeating updates
+                Intent intent = new Intent(this, WidgetManager.class);
+                intent.putExtra(ALARM_CALL, true);
+                updateIntent =
+                    PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            updateMeasurement();
+                AlarmManager alarmManager =
+                    (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+                alarmManager.setInexactRepeating(
+                    AlarmManager.ELAPSED_REALTIME,
+                    0,
+                    AlarmManager.INTERVAL_HALF_HOUR,
+                    updateIntent);
+            }
         }
+
+        // Show some UI as quickly as possible
+        updateUi();
+
+        // Schedule a temperature update
+        updateMeasurement();
     }
 
     /**
@@ -389,10 +420,24 @@ public class WidgetManager extends Service {
 
             if (appWidgetIds.isEmpty()) {
                 Log.d(TAG, "No more widgets left...");
+
+                if (updateIntent != null) {
+                    Log.d(TAG, "Shutting down periodic updates");
+                    AlarmManager alarmManager =
+                        (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+                    alarmManager.cancel(updateIntent);
+                    updateIntent = null;
+                } else {
+                    Log.w(TAG, "Periodic updates not active, can't shut them down");
+                }
+
                 if (updateListener != null) {
                     updateListener.close();
                     updateListener = null;
+                } else {
+                    Log.w(TAG, "No update listener available, can't shut it down");
                 }
+
                 stopSelf();
             }
         }
@@ -409,6 +454,9 @@ public class WidgetManager extends Service {
             onUpdateInternal(intent.getIntArrayExtra(UPDATED_IDS_EXTRA));
         } else if (intent.hasExtra(DELETED_IDS_EXTRA)) {
             onDeletedInternal(intent.getIntArrayExtra(DELETED_IDS_EXTRA));
+        } else if (intent.hasExtra(ALARM_CALL)) {
+            Log.d(TAG, "Periodic alarm received");
+            updateMeasurement();
         } else {
             super.onStart(intent, startId);
         }
