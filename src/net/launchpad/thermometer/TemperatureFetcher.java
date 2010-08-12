@@ -80,23 +80,17 @@ public class TemperatureFetcher extends Thread implements Callback {
 
         String jsonString = null;
         int attempt = 0;
-        long delayMs = 5000;
         while (jsonString == null) {
             attempt++;
-            boolean mightRetry = (attempt <= 5);
+            boolean mightRetry = (attempt <= 10);
 
             try {
                 jsonString = fetchUrl(url);
                 break;
             } catch (IOException e) {
-                String retryString = "";
-                if (mightRetry) {
-                    retryString =
-                        ", will retry in " + (delayMs / 1000L) + "s";
-                }
-                widgetManager.setStatus("Service error" + retryString);
+                widgetManager.setStatus("Service error");
                 Log.w(TAG, "Error reading weather data on attempt "
-                    + attempt + retryString + ": " + url,
+                    + attempt + ": " + url,
                     e);
             }
 
@@ -104,14 +98,6 @@ public class TemperatureFetcher extends Thread implements Callback {
                 // We've done our best and failed, give up
                 break;
             }
-
-            try {
-                Thread.sleep(delayMs);
-            } catch (InterruptedException e) {
-                Log.w(TAG, "Interrupted waiting to retry temperature download, giving up", e);
-                break;
-            }
-            delayMs *= 2;
         }
         if (jsonString == null) {
             Log.e(TAG, "Failed reading weather data, giving up");
@@ -148,8 +134,8 @@ public class TemperatureFetcher extends Thread implements Callback {
         StringBuilder jsonBuilder = new StringBuilder();
 
         URLConnection connection = url.openConnection();
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(5000);
+        connection.setConnectTimeout(60000);
+        connection.setReadTimeout(60000);
         BufferedReader in =
             new BufferedReader(new InputStreamReader(connection.getInputStream()), 1024);
         try {
