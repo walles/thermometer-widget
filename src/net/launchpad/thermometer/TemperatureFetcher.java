@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.UnknownHostException;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -87,8 +88,12 @@ public class TemperatureFetcher extends Thread implements Callback {
             try {
                 jsonString = fetchUrl(url);
                 break;
+            } catch (UnknownHostException e) {
+                widgetManager.setStatus("Network down");
+                Log.e(TAG, "Network probably down, not retrying", e);
+                break;
             } catch (IOException e) {
-                widgetManager.setStatus("Service error");
+                widgetManager.setStatus("Weather service error");
                 Log.w(TAG, "Error reading weather data on attempt "
                     + attempt + ": " + url,
                     e);
