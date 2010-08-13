@@ -20,6 +20,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.location.Location;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
@@ -61,11 +63,6 @@ public class WidgetManager extends Service {
     private JSONObject weather;
 
     /**
-     * Our last known position.
-     */
-    private Location location;
-
-    /**
      * How we're currently doing on getting a good temperature reading for
      * the user.
      */
@@ -95,12 +92,17 @@ public class WidgetManager extends Service {
         temperatureFetcher.start();
     }
 
+    /**
+     * Name of extra intent field containing a list of updated widget IDs.
+     */
     private final static String UPDATED_IDS_EXTRA = "updatedIds";
 
     /**
      * Update / initialize widgets.
      *
      * @param updatedIds IDs of the updated widgets.
+     *
+     * @param context Used for creating a widget update {@link Intent}.
      */
     public static void onUpdate(Context context, int updatedIds[]) {
         Intent intent = new Intent(context, WidgetManager.class);
@@ -108,12 +110,17 @@ public class WidgetManager extends Service {
         context.startService(intent);
     }
 
+    /**
+     * Name of extra intent field containing a list of deleted widget IDs.
+     */
     private final static String DELETED_IDS_EXTRA = "deletedIds";
 
     /**
      * Delete widgets.
      *
      * @param deletedIds IDs of the updated widgets.
+     *
+     * @param context Used for creating a widget delete {@link Intent}.
      */
     public static void onDeleted(Context context, int deletedIds[]) {
         Intent intent = new Intent(context, WidgetManager.class);
@@ -140,28 +147,6 @@ public class WidgetManager extends Service {
     public JSONObject getWeather() {
         synchronized (lock) {
             return this.weather;
-        }
-    }
-
-    /**
-     * Tell us where we are.
-     *
-     * @param location Where we are.
-     */
-    public void setLocation(Location location) {
-        synchronized (lock) {
-            this.location = location;
-        }
-    }
-
-    /**
-     * Where are we?
-     *
-     * @return Where we are.
-     */
-    public Location getLocation() {
-        synchronized (lock) {
-            return this.location;
         }
     }
 
@@ -213,6 +198,37 @@ public class WidgetManager extends Service {
     }
 
     /**
+     * Find out if we're running on emulated hardware.
+     *
+     * @return true if we're running on the emulator, false otherwise
+     */
+    private boolean isRunningOnEmulator() {
+        return "unknown".equals(Build.BOARD);
+    }
+
+    /**
+     * Get the phone's last known location.
+     *
+     * @return the phone's last known location.
+     */
+    private Location getLocation() {
+        LocationManager locationManager =
+            (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
+        Location lastKnownLocation =
+            locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
+        if (lastKnownLocation == null && isRunningOnEmulator()) {
+            Log.i(TAG,
+                "Location unknown but running on emulator, hard coding coordinates to Johan's place");
+            lastKnownLocation = new Location("Johan");
+            lastKnownLocation.setLatitude(59.3190);
+            lastKnownLocation.setLongitude(18.0518);
+        }
+        return lastKnownLocation;
+    }
+
+    /**
      * Take a new weather measurement for the widget to display.
      */
     public void updateMeasurement() {
@@ -221,6 +237,7 @@ public class WidgetManager extends Service {
         Location currentLocation = getLocation();
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
+            setStatus("Locating phone...");
         } else {
             temperatureFetcher.fetchTemperature(
                 currentLocation.getLatitude(),

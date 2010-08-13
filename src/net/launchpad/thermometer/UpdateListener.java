@@ -6,7 +6,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -28,14 +27,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     private WidgetManager widgetManager;
 
     /**
-     * Find out if we're running on emulated hardware.
+     * Create a new update listener.
      *
-     * @return true if we're running on the emulator, false otherwise
+     * @param widgetManager The widget manager that will be informed about
+     * updates.
      */
-    private boolean isRunningOnEmulator() {
-        return "unknown".equals(Build.BOARD);
-    }
-
     public UpdateListener(WidgetManager widgetManager) {
         if (widgetManager == null) {
             throw new NullPointerException("widgetManager must be non-null");
@@ -44,23 +40,6 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
 
         Log.d(TAG, "Registering location listener");
         LocationManager locationManager = getLocationManager();
-
-        // Set up an initial location, this will often be good enough
-        Location lastKnownLocation =
-            locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-        if (lastKnownLocation == null && isRunningOnEmulator()) {
-            Log.i(TAG,
-                "Location unknown but running on emulator, hard coding coordinates to Johan's place");
-            lastKnownLocation = new Location("Johan");
-            lastKnownLocation.setLatitude(59.3190);
-            lastKnownLocation.setLongitude(18.0518);
-        }
-        if (lastKnownLocation != null) {
-            widgetManager.setLocation(lastKnownLocation);
-        } else {
-            widgetManager.setStatus("Locating phone...");
-        }
-
         locationManager.requestLocationUpdates(
             LocationManager.NETWORK_PROVIDER,
             47 * 60 * 1000, // Drift a bit relative to the periodic widget update
@@ -113,7 +92,8 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         Log.d(TAG, String.format("Location updated to lat=%.4f, lon=%.4f",
             networkLocation.getLatitude(),
             networkLocation.getLongitude()));
-        widgetManager.setLocation(networkLocation);
+
+        // Take a new measurement at our current location
         widgetManager.updateMeasurement();
     }
 
