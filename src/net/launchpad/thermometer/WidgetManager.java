@@ -300,11 +300,6 @@ public class WidgetManager extends Service {
                 degrees = Long.toString(Math.round(centigrades));
                 Calendar date =
                     parseDateTime(weatherObservation.getString("datetime"));
-                metadata =
-                    toHoursString(date)
-                    + " "
-                    + weatherObservation.getString("stationName");
-
                 Log.d(TAG,
                     String.format("Weather data is %dC, %dkts observed %sUTC at %s",
                         Math.round(centigrades),
@@ -314,6 +309,15 @@ public class WidgetManager extends Service {
 
                 SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(this);
+
+                if (preferences.getBoolean("showMetadataPref", false)) {
+                    metadata =
+                        toHoursString(date)
+                        + " "
+                        + weatherObservation.getString("stationName");
+                } else {
+                    metadata = "";
+                }
 
                 if (preferences.getBoolean("windChillPref", false)) {
                     double windKmh = 1.85 * windKnots;

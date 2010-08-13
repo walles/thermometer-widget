@@ -7,5 +7,16 @@
       android:defaultValue="Celsius"
       android:entryValues="@array/temperatureUnits"
       android:entries="@array/temperatureUnits"/>
-<CheckBoxPreference android:key="windChillPref" android:title="Wind Chill" android:defaultValue="false" android:summaryOn="Temperature is adjusted for wind chill" android:summaryOff="No wind chill calculations are done"></CheckBoxPreference>
+   <CheckBoxPreference 
+      android:key="windChillPref"
+      android:title="Wind Chill"
+      android:defaultValue="false"
+      android:summaryOn="Temperature is adjusted for wind chill"
+      android:summaryOff="No wind chill calculations are done"/>
+   <CheckBoxPreference 
+      android:key="showMetadataPref"
+      android:title="Weather Station Info"
+      android:defaultValue="false"
+      android:summaryOn="Displayed below the temperature"
+      android:summaryOff="Not displayed"/>
 </PreferenceScreen>
