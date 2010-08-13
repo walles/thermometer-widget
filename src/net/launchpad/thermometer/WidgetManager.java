@@ -22,6 +22,7 @@ import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -90,10 +91,6 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
-        super();
-
-        setStatus("Initializing...");
-
         temperatureFetcher = new TemperatureFetcher(this);
         temperatureFetcher.start();
     }
@@ -169,6 +166,26 @@ public class WidgetManager extends Service {
     }
 
     /**
+     * Return a String representing the given time of day (hours and minutes)
+     * according to the user's system settings.
+     *
+     * @param time A time of day.
+     *
+     * @return Either "15:42" or "3:42PM".
+     */
+    private CharSequence toHoursString(Calendar time) {
+        String format;
+
+        if (DateFormat.is24HourFormat(this)) {
+            format = "kk:mm";
+        } else {
+            format = "h:mma";
+        }
+
+        return DateFormat.format(format, time);
+    }
+
+    /**
      * How are we doing on fetching the weather?
      *
      * @param status A status string.
@@ -176,10 +193,8 @@ public class WidgetManager extends Service {
     public void setStatus(String status) {
         synchronized (lock) {
             Calendar now = new GregorianCalendar();
-            this.status =  String.format("%02d:%02d %s",
-                now.get(Calendar.HOUR_OF_DAY),
-                now.get(Calendar.MINUTE),
-                status);
+
+            this.status =  toHoursString(now) + " " + status;
         }
     }
 
@@ -190,7 +205,10 @@ public class WidgetManager extends Service {
      */
     public String getStatus() {
         synchronized (lock) {
-            return this.status;
+            if (status == null) {
+                setStatus("Initializing...");
+            }
+            return status;
         }
     }
 
@@ -266,10 +284,9 @@ public class WidgetManager extends Service {
                 Calendar date =
                     parseDateTime(weatherObservation.getString("datetime"));
                 metadata =
-                    String.format("%02d:%02d %s",
-                        date.get(Calendar.HOUR_OF_DAY),
-                        date.get(Calendar.MINUTE),
-                        weatherObservation.getString("stationName"));
+                    toHoursString(date)
+                    + " "
+                    + weatherObservation.getString("stationName");
 
                 Log.d(TAG,
                     String.format("Weather data is %dC, %dkts observed %sUTC at %s",
