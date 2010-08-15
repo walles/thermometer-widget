@@ -154,7 +154,36 @@ public class WidgetManager extends Service {
      */
     public void setWeather(JSONObject weather) {
         synchronized (lock) {
-            this.weather = weather;
+            if (weather != null) {
+                // Non-null weather update, take it!
+                this.weather = weather;
+            } else if (this.weather == null) {
+                // This block intentionally left blank; weather is already null
+            } else {
+                // Null weather update, only take it if our most recent
+                // observation is getting too aged.
+
+                Calendar lastObservationTime;
+                try {
+                    lastObservationTime = parseDateTime(this.weather);
+                } catch (JSONException e) {
+                    Log.e(TAG, "Can't parse time from last weather observation, dropping it", e);
+                    this.weather = null;
+                    return;
+                }
+
+                long lastObservationAgeMs =
+                    System.currentTimeMillis()
+                    - lastObservationTime.getTimeInMillis();
+                long lastObservationAgeMinutes =
+                    lastObservationAgeMs / (60 * 1000);
+                if (lastObservationAgeMinutes >= 130) {
+                    // Last observation is more than two hours old, meaning
+                    // that we've made four unsuccessful attempts at getting a
+                    // new one.  Give up and null out our weather observation.
+                    this.weather = weather;
+                }
+            }
         }
     }
 
@@ -333,7 +362,7 @@ public class WidgetManager extends Service {
                 double windKnots = weatherObservation.getDouble("windSpeed");
                 degrees = Long.toString(Math.round(centigrades));
                 Calendar date =
-                    parseDateTime(weatherObservation.getString("datetime"));
+                    parseDateTime(weatherObservation);
                 Log.d(TAG,
                     String.format("Weather data is %dC, %dkts observed %sUTC at %s",
                         Math.round(centigrades),
@@ -418,6 +447,21 @@ public class WidgetManager extends Service {
         }
 
         Log.d(TAG, "UI updated");
+    }
+
+    /**
+     * Extract a time stamp from a weather observation.
+     *
+     * @param weatherObservation The weather observation
+     *
+     * @return When the weather was observed.
+     *
+     * @throws JSONException If parsing the JSON object fails.
+     */
+    private Calendar parseDateTime(JSONObject weatherObservation)
+        throws JSONException
+    {
+        return parseDateTime(weatherObservation.getString("datetime"));
     }
 
     /**
