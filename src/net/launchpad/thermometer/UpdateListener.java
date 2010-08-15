@@ -1,17 +1,17 @@
 /*
  * Thermomether Widget - An Android widget showing the outdoor temperature.
  * Copyright (C) 2010  Johan Walles, johan.walles@gmail.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -58,6 +58,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
 
         Log.d(TAG, "Registering location listener");
         LocationManager locationManager = getLocationManager();
+        widgetManager.setStatus("Locating phone...");
         locationManager.requestLocationUpdates(
             LocationManager.NETWORK_PROVIDER,
             47 * 60 * 1000, // Drift a bit relative to the periodic widget update
@@ -118,7 +119,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     public void onProviderDisabled(String provider) {
         if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             Log.e(TAG, "Location provider disabled: " + provider);
-            widgetManager.setStatus("Location services disabled");
+            widgetManager.setStatus("Click to enable network positioning");
         }
     }
 

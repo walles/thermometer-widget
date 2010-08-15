@@ -42,6 +42,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -198,6 +199,11 @@ public class WidgetManager extends Service {
             Calendar now = new GregorianCalendar();
 
             this.status =  toHoursString(now) + " " + status;
+
+            Log.i(TAG, "Set user visible status: " + status);
+
+            // Show the new status to the user
+            updateUi();
         }
     }
 
@@ -247,6 +253,17 @@ public class WidgetManager extends Service {
     }
 
     /**
+     * Is network positioning enabled?
+     *
+     * @return True if network positioning is enabled.  False otherwise.
+     */
+    private boolean isPositioningEnabled() {
+        LocationManager locationManager =
+            (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    }
+
+    /**
      * Take a new weather measurement for the widget to display.
      */
     public void updateMeasurement() {
@@ -255,7 +272,6 @@ public class WidgetManager extends Service {
         Location currentLocation = getLocation();
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
-            setStatus("Locating phone...");
         } else {
             temperatureFetcher.fetchTemperature(
                 currentLocation.getLatitude(),
@@ -381,8 +397,14 @@ public class WidgetManager extends Service {
         remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
 
-        // Tell widget to launch the preferences activity on click
-        Intent intent = new Intent(this, ThermometerConfigure.class);
+        Intent intent;
+        if (isPositioningEnabled()) {
+            // Tell widget to launch the preferences activity on click
+            intent = new Intent(this, ThermometerConfigure.class);
+        } else {
+            // Don't know where we are, launch positioning settings on click
+            intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        }
         PendingIntent pendingIntent =
             PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         remoteViews.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
