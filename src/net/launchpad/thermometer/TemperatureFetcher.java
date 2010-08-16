@@ -1,17 +1,17 @@
 /*
  * Thermomether Widget - An Android widget showing the outdoor temperature.
  * Copyright (C) 2010  Johan Walles, johan.walles@gmail.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -107,11 +107,12 @@ public class TemperatureFetcher extends Thread implements Callback {
                 jsonString = fetchUrl(url);
                 break;
             } catch (UnknownHostException e) {
-                widgetManager.setStatus("Network down");
+                widgetManager.setStatus("Network down, retry in 30min");
                 Log.e(TAG, "Network probably down, not retrying", e);
                 break;
             } catch (IOException e) {
-                widgetManager.setStatus("Weather service error");
+                widgetManager.setStatus("Weather service error, retry in "
+                    + (mightRetry ? "1min" : "25min"));
                 Log.w(TAG, "Error reading weather data on attempt "
                     + attempt + ": " + url,
                     e);
