@@ -570,23 +570,47 @@ public class WidgetManager extends Service {
         return null;
     }
 
-    @Override
-    public void onStart(Intent intent, int startId) {
-        if (intent.hasExtra(UPDATED_IDS_EXTRA)) {
+    /**
+     * Handle the intent from {@link #onStart(Intent, int)} /
+     * {@link #onStartCommand(Intent, int, int)}.
+     *
+     * @param intent The intent.
+     *
+     * @return True if the intent was handled, false otherwise
+     */
+    private boolean handleStart(Intent intent) {
+        if (intent == null) {
+            Log.w(TAG, "Ignored null onStart() intent");
+            return false;
+        } else if (intent.hasExtra(UPDATED_IDS_EXTRA)) {
             onUpdateInternal(intent.getIntArrayExtra(UPDATED_IDS_EXTRA));
+            return true;
         } else if (intent.hasExtra(DELETED_IDS_EXTRA)) {
             onDeletedInternal(intent.getIntArrayExtra(DELETED_IDS_EXTRA));
+            return true;
         } else if (intent.hasExtra(ALARM_CALL)) {
             Log.d(TAG, "Periodic alarm received");
             updateMeasurement();
+            return true;
         } else {
+            return false;
+        }
+    }
+
+    @Override
+    public void onStart(Intent intent, int startId) {
+        if (!handleStart(intent)) {
             super.onStart(intent, startId);
         }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        onStart(intent, startId);
+        if (!handleStart(intent)) {
+            super.onStartCommand(intent, flags, startId);
+        }
+
+        // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
         return START_STICKY;
     }
 }
