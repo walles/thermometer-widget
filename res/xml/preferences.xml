@@ -19,4 +19,8 @@
       android:defaultValue="false"
       android:summaryOn="Displayed below the temperature"
       android:summaryOff="Not displayed"/>
+   <Preference 
+      android:title="Text Color"
+      android:key="textColorPref"
+      android:defaultValue="0xffffffff"/>
 </PreferenceScreen>

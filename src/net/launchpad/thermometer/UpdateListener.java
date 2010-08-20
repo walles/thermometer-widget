@@ -61,7 +61,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         widgetManager.setStatus("Locating phone...");
         locationManager.requestLocationUpdates(
             LocationManager.NETWORK_PROVIDER,
-            47 * 60 * 1000, // Drift a bit relative to the periodic widget update
+            41 * 60 * 1000, // Drift a bit relative to the periodic widget update
             50000, // Every 50km we move
             this);
 
@@ -105,6 +105,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(widgetManager);
         preferences.unregisterOnSharedPreferenceChangeListener(this);
+        getLocationManager().removeUpdates(this);
     }
 
     public void onLocationChanged(Location networkLocation) {

@@ -37,6 +37,7 @@ import android.appwidget.AppWidgetManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
@@ -353,6 +354,9 @@ public class WidgetManager extends Service {
         Log.d(TAG, "Updating widget display...");
         JSONObject weatherObservation = getWeather();
 
+        SharedPreferences preferences =
+            PreferenceManager.getDefaultSharedPreferences(this);
+
         String degrees = "--";
         String metadata = getStatus();
         if (weatherObservation != null) {
@@ -369,9 +373,6 @@ public class WidgetManager extends Service {
                         Math.round(windKnots),
                         weatherObservation.getString("datetime"),
                         weatherObservation.getString("stationName")));
-
-                SharedPreferences preferences =
-                    PreferenceManager.getDefaultSharedPreferences(this);
 
                 if (preferences.getBoolean("showMetadataPref", false)) {
                     metadata =
@@ -423,8 +424,14 @@ public class WidgetManager extends Service {
         RemoteViews remoteViews =
             new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                 R.layout.main);
+
         remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
+        remoteViews.setTextColor(R.id.TemperatureView,
+            preferences.getInt("textColorPref", Color.WHITE));
+
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
+        remoteViews.setTextColor(R.id.MetadataView,
+            preferences.getInt("textColorPref", Color.WHITE));
 
         Intent intent;
         if (isPositioningEnabled()) {

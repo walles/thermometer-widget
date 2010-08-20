@@ -13,8 +13,6 @@
      android:text="--°"
      
      android:textColor="#fff"
-     android:shadowColor="#000"
-     android:shadowRadius="5.0"
      android:textSize="40dip"
      android:gravity="center"
      />
@@ -25,8 +23,6 @@
      android:layout_height="wrap_content"
      
      android:textColor="#fff"
-     android:shadowColor="#000"
-     android:shadowRadius="5.0"
      android:textSize="10dip"
      android:gravity="center"
      
