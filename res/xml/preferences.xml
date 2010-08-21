@@ -11,7 +11,7 @@
       android:key="windChillPref"
       android:title="Wind Chill"
       android:defaultValue="false"
-      android:summaryOn="Temperature is adjusted for wind chill"
+      android:summaryOn="Wind chill adjusted temperatures are marked with *"
       android:summaryOff="No wind chill calculations are done"/>
    <CheckBoxPreference 
       android:key="showMetadataPref"

@@ -356,6 +356,7 @@ public class WidgetManager extends Service {
 
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(this);
+        boolean windChillComputed = false;
 
         String degrees = "--";
         String metadata = getStatus();
@@ -404,6 +405,7 @@ public class WidgetManager extends Service {
                         Log.d(TAG,
                             "Temperature adjusted for wind chill to "
                             + Math.round(centigrades) + "C");
+                        windChillComputed = true;
                     }
                 } else {
                     Log.d(TAG, "Wind chill calculations not enabled, sticking to "
@@ -425,7 +427,11 @@ public class WidgetManager extends Service {
             new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                 R.layout.main);
 
-        remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
+        if (windChillComputed) {
+            remoteViews.setTextViewText(R.id.TemperatureView, degrees + "*");
+        } else {
+            remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
+        }
         remoteViews.setTextColor(R.id.TemperatureView,
             preferences.getInt("textColorPref", Color.WHITE));
 
