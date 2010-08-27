@@ -396,16 +396,23 @@ public class WidgetManager extends Service {
                             + Math.round(windKmh) + "km/h");
                     } else {
                         double windKmhTo0_16 = Math.pow(windKmh, 0.16);
-                        centigrades =
+                        double adjustedCentigrades =
                             13.12
                             + 0.6215 * centigrades
                             - 11.37 *  windKmhTo0_16
                             + 0.3965 * centigrades * windKmhTo0_16;
 
-                        Log.d(TAG,
-                            "Temperature adjusted for wind chill to "
-                            + Math.round(centigrades) + "C");
-                        windChillComputed = true;
+                        if (Math.round(adjustedCentigrades) != Math.round(centigrades)) {
+                            centigrades = adjustedCentigrades;
+                            Log.d(TAG,
+                                "Temperature adjusted for wind chill to "
+                                + Math.round(centigrades) + "C");
+                            windChillComputed = true;
+                        } else {
+                            Log.d(TAG,
+                                "Wind chill adjustment didn't change centigrades: "
+                                + Math.round(centigrades));
+                        }
                     }
                 } else {
                     Log.d(TAG, "Wind chill calculations not enabled, sticking to "
