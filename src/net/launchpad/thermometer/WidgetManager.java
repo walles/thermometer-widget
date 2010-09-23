@@ -434,14 +434,19 @@ public class WidgetManager extends Service {
             new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                 R.layout.main);
 
+        String temperatureString;
         if (windChillComputed) {
-            remoteViews.setTextViewText(R.id.TemperatureView, degrees + "*");
+            temperatureString = degrees + "*";
         } else {
-            remoteViews.setTextViewText(R.id.TemperatureView, degrees + "°");
+            temperatureString = degrees + "°";
         }
+
+        Log.d(TAG, "Displaying temperature: <" + temperatureString + ">");
+        remoteViews.setTextViewText(R.id.TemperatureView, temperatureString);
         remoteViews.setTextColor(R.id.TemperatureView,
             preferences.getInt("textColorPref", Color.WHITE));
 
+        Log.d(TAG, "Displaying metadata: <" + metadata + ">");
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
         remoteViews.setTextColor(R.id.MetadataView,
             preferences.getInt("textColorPref", Color.WHITE));
