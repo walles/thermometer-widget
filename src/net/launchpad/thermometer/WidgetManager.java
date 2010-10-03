@@ -624,16 +624,12 @@ public class WidgetManager extends Service {
 
     @Override
     public void onStart(Intent intent, int startId) {
-        if (!handleStart(intent)) {
-            super.onStart(intent, startId);
-        }
+        handleStart(intent);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (!handleStart(intent)) {
-            super.onStartCommand(intent, flags, startId);
-        }
+        handleStart(intent);
 
         // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
         return START_STICKY;
