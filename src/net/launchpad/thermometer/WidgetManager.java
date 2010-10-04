@@ -413,6 +413,7 @@ public class WidgetManager extends Service {
                                 "Wind chill adjustment didn't change centigrades: "
                                 + Math.round(centigrades));
                         }
+                        degrees = Long.toString(Math.round(centigrades));
                     }
                 } else {
                     Log.d(TAG, "Wind chill calculations not enabled, sticking to "
