@@ -25,6 +25,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -86,7 +87,7 @@ public class TemperatureFetcher extends Thread implements Callback {
         String urlString = null;
         try {
             urlString =
-                String.format("http://ws.geonames.org/findNearByWeatherJSON?lat=%.4f&lng=%.4f",
+                String.format(Locale.ENGLISH, "http://ws.geonames.org/findNearByWeatherJSON?lat=%.4f&lng=%.4f",
                     latitude, longitude);
 
             url = new URL(urlString);
