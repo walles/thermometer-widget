@@ -130,11 +130,24 @@ public class TemperatureFetcher extends Thread implements Callback {
 
         try {
             JSONObject weatherObservation = new JSONObject(jsonString);
-            weatherObservation =
-                weatherObservation.getJSONObject("weatherObservation");
 
-            Log.d(TAG, "New weather observation received:\n" + jsonString);
-            return weatherObservation;
+            if (weatherObservation.has("weatherObservation")) {
+                // Parse the temperature
+                weatherObservation =
+                    weatherObservation.getJSONObject("weatherObservation");
+
+                Log.d(TAG, "New weather observation received:\n" + jsonString);
+                return weatherObservation;
+            }
+
+            // Assume an error message:
+            // {"status":{"message":"error parsing parameters for lat/lng","value":14}}
+            weatherObservation =
+                weatherObservation.getJSONObject("status");
+            Log.w(TAG, "Web service trouble: " +
+            		"" + weatherObservation.getString("message"));
+            widgetManager.setStatus(weatherObservation.getString("message"));
+            return null;
         } catch (JSONException e) {
             Log.e(TAG, "Parsing weather data failed:\n"
                 + jsonString, e);
