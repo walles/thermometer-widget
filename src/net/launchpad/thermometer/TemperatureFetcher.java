@@ -172,21 +172,23 @@ public class TemperatureFetcher extends Thread implements Callback {
             if (statusCode == 22) {
                 // "The free servers are busy, go away"
                 widgetManager.setStatus("Weather server busy");
-                Log.d(TAG, "Weather server busy, sleeping for 23s");
-                try {
-                    Thread.sleep(23000);
-                } catch (InterruptedException e) {
-                    return null;
-                }
+                Log.d(TAG, "Weather server busy");
+            } else {
+                String statusMessage = weatherObservation.getString("message");
+                Log.w(TAG, "Web service trouble: ["
+                    + statusCode
+                    + "] "
+                    + statusMessage);
+                widgetManager.setStatus(statusMessage);
+            }
+
+            Log.d(TAG, "Sleeping for 23s");
+            try {
+                Thread.sleep(23000);
+            } catch (InterruptedException e) {
                 return null;
             }
 
-            String statusMessage = weatherObservation.getString("message");
-            Log.w(TAG, "Web service trouble: ["
-                + statusCode
-                + "] "
-                + statusMessage);
-            widgetManager.setStatus(statusMessage);
             return null;
         } catch (JSONException e) {
             Log.e(TAG, "Parsing weather data failed:\n"
@@ -278,6 +280,7 @@ public class TemperatureFetcher extends Thread implements Callback {
     }
 
     public boolean handleMessage(Message message) {
+        Log.d(TAG, "Fetcher got temperature request...");
         Bundle extras = message.peekData();
         if (extras == null) {
             Log.w(TAG, "Got message with no bundle, can't handle it: " + message);
