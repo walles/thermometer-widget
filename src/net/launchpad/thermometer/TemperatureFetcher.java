@@ -169,16 +169,27 @@ public class TemperatureFetcher extends Thread implements Callback {
                 weatherObservation.getJSONObject("status");
             int statusCode = weatherObservation.getInt("value");
 
-            if (statusCode == 22) {
+            String statusMessage = weatherObservation.getString("message");
+            Log.w(TAG, "Web service trouble: ["
+                + statusCode
+                + "] "
+                + statusMessage);
+
+            switch (statusCode) {
+            case 22:
                 // "The free servers are busy, go away"
                 widgetManager.setStatus("Weather server busy");
-                Log.d(TAG, "Weather server busy");
-            } else {
-                String statusMessage = weatherObservation.getString("message");
-                Log.w(TAG, "Web service trouble: ["
-                    + statusCode
-                    + "] "
-                    + statusMessage);
+                break;
+
+            case 12:
+                // Probably database trouble at the server side:
+                // "Connection refused. Check that the hostname and port are
+                // correct and that the postmaster is accepting TCP/IP
+                // connections."
+                widgetManager.setStatus("Weather server temporarily unavailable [12]");
+                break;
+
+            default:
                 widgetManager.setStatus(statusMessage);
             }
 
