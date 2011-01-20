@@ -21,8 +21,6 @@ package net.launchpad.thermometer;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +32,7 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -71,16 +70,16 @@ public class WidgetManager extends Service {
     private Object lock = new Object();
 
     /**
-     * The widget IDs that we know about.
-     */
-    private Set<Integer> appWidgetIds = new HashSet<Integer>();
-
-    /**
      * The latest weather measurement.
      * <p>
      * You must synchronize on {@link #lock} before accessing this.
      */
     private JSONObject weather;
+
+    /**
+     * Has the periodic updates alarm been registered?
+     */
+    private boolean periodicUpdateSet = false;
 
     /**
      * How we're currently doing on getting a good temperature reading for
@@ -94,17 +93,6 @@ public class WidgetManager extends Service {
     private TemperatureFetcher temperatureFetcher;
 
     /**
-     * This will be called regularly by the {@link AlarmManager}.
-     */
-    private PendingIntent updateIntent;
-
-    /**
-     * Marker field to say that this is an update requested by the
-     * {@link AlarmManager}.
-     */
-    private final static String ALARM_CALL = "AlarmManager says hello";
-
-    /**
      * Create a new widget manager.
      */
     public WidgetManager() {
@@ -113,38 +101,12 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Name of extra intent field containing a list of updated widget IDs.
-     */
-    private final static String UPDATED_IDS_EXTRA = "updatedIds";
-
-    /**
-     * Update / initialize widgets.
-     *
-     * @param updatedIds IDs of the updated widgets.
+     * Update / initialize / shut down widgets.
      *
      * @param context Used for creating a widget update {@link Intent}.
      */
-    public static void onUpdate(Context context, int updatedIds[]) {
+    public static void onUpdate(Context context) {
         Intent intent = new Intent(context, WidgetManager.class);
-        intent.putExtra(UPDATED_IDS_EXTRA, updatedIds);
-        context.startService(intent);
-    }
-
-    /**
-     * Name of extra intent field containing a list of deleted widget IDs.
-     */
-    private final static String DELETED_IDS_EXTRA = "deletedIds";
-
-    /**
-     * Delete widgets.
-     *
-     * @param deletedIds IDs of the updated widgets.
-     *
-     * @param context Used for creating a widget delete {@link Intent}.
-     */
-    public static void onDeleted(Context context, int deletedIds[]) {
-        Intent intent = new Intent(context, WidgetManager.class);
-        intent.putExtra(DELETED_IDS_EXTRA, deletedIds);
         context.startService(intent);
     }
 
@@ -310,6 +272,25 @@ public class WidgetManager extends Service {
     }
 
     /**
+     * Return widget IDs for all active Thermometer Widgets.
+     *
+     * @return widget IDs for all active Thermometer Widgets.
+     *
+     * @see AppWidgetManager#getAppWidgetIds(ComponentName)
+     */
+    private int[] getWidgetIds() {
+        AppWidgetManager manager = AppWidgetManager.getInstance(this);
+
+        int[] appWidgetIds =
+            manager.getAppWidgetIds(
+                new ComponentName(
+                    "net.launchpad.thermometer",
+                    ThermometerWidget.class.getCanonicalName()));
+        Log.d(TAG, "Got widget IDs: " + Arrays.toString(appWidgetIds));
+        return appWidgetIds;
+    }
+
+    /**
      * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
      */
     private final Pattern DATE_PARSE =
@@ -467,7 +448,12 @@ public class WidgetManager extends Service {
         AppWidgetManager appWidgetManager =
             AppWidgetManager.getInstance(this);
         synchronized (lock) {
-            for (int widgetId : appWidgetIds) {
+            int[] widgetIds = getWidgetIds();
+            if (widgetIds.length == 0) {
+                // No widgets to update, shut down
+                close();
+            }
+            for (int widgetId : widgetIds) {
                 appWidgetManager.updateAppWidget(widgetId, remoteViews);
             }
         }
@@ -492,13 +478,10 @@ public class WidgetManager extends Service {
 
     /**
      * Dispatched from {@link #onStart(Intent, int)}, call through
-     * {@link #onUpdate(Context, int[])}.
-     *
-     * @param updatedIds IDs for updated widgets.
+     * {@link #onUpdate(Context)}.
      */
-    private void onUpdateInternal(int[] updatedIds) {
-        Log.d(TAG, "onUpdate() called with widget ids: "
-            + Arrays.toString(updatedIds));
+    private void onUpdateInternal() {
+        Log.d(TAG, "onUpdate() called");
 
         synchronized (lock) {
             if (updateListener == null) {
@@ -508,25 +491,7 @@ public class WidgetManager extends Service {
                 Log.d(TAG, "Not touching existing update listener");
             }
 
-            for (int updatedId : updatedIds) {
-                appWidgetIds.add(updatedId);
-            }
-
-            if (updateIntent == null) {
-                // Set up repeating updates
-                Intent intent = new Intent(this, WidgetManager.class);
-                intent.putExtra(ALARM_CALL, true);
-                updateIntent =
-                    PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-                AlarmManager alarmManager =
-                    (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-                alarmManager.setInexactRepeating(
-                    AlarmManager.ELAPSED_REALTIME,
-                    0,
-                    AlarmManager.INTERVAL_HALF_HOUR,
-                    updateIntent);
-            }
+            setPeriodicUpdatesEnabled(true);
         }
 
         // Show some UI as quickly as possible
@@ -537,57 +502,57 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Dispatched from {@link #onStart(Intent, int)}, call through
-     * {@link #onDeleted(Context, int[])}.
+     * Enable / disable periodic updates.
      *
-     * @param deletedIds IDs for deleted widgets.
+     * @param enabled True to enable periodic updates, false to disable them.
      */
-    private void onDeletedInternal(int[] deletedIds) {
-        Log.d(TAG, "onDeleted() called with widget ids: " +
-            Arrays.toString(deletedIds));
+    private void setPeriodicUpdatesEnabled(boolean enabled) {
+        // Set up repeating updates
+        Intent intent = new Intent(this, WidgetManager.class);
+        PendingIntent updateIntent =
+            PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        AlarmManager alarmManager =
+            (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+        synchronized (lock) {
+            if (enabled) {
+                if (!periodicUpdateSet) {
+                    alarmManager.setInexactRepeating(
+                        AlarmManager.ELAPSED_REALTIME,
+                        0,
+                        AlarmManager.INTERVAL_HALF_HOUR,
+                        updateIntent);
+                    periodicUpdateSet = true;
+                }
+            } else {
+                alarmManager.cancel(updateIntent);
+                periodicUpdateSet = false;
+            }
+        }
+    }
+
+    /**
+     * Shut down.
+     */
+    private void close() {
+        Log.d(TAG, "Shutting down...");
 
         synchronized (lock) {
+            setPeriodicUpdatesEnabled(false);
+
             if (updateListener == null) {
                 Log.w(TAG,
                 "No preference change listener found, should have been registered in onUpdate()");
             }
 
-            // Forget deleted widget IDs
-            for (Integer deletedId : deletedIds) {
-                if (appWidgetIds.contains(deletedId)) {
-                    Log.d(TAG,
-                        "Forgetting deleted widget: " + deletedId);
-                    appWidgetIds.remove(deletedId);
-                } else {
-                    Log.w(TAG,
-                        "Can't forget unknown widget: " + deletedId);
-                }
+            if (updateListener != null) {
+                updateListener.close();
+                updateListener = null;
+            } else {
+                Log.w(TAG, "No update listener available, can't shut it down");
             }
-            Log.d(TAG,
-                "Still active widgets: " + appWidgetIds);
 
-            if (appWidgetIds.isEmpty()) {
-                Log.d(TAG, "No more widgets left...");
-
-                if (updateIntent != null) {
-                    Log.d(TAG, "Shutting down periodic updates");
-                    AlarmManager alarmManager =
-                        (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-                    alarmManager.cancel(updateIntent);
-                    updateIntent = null;
-                } else {
-                    Log.w(TAG, "Periodic updates not active, can't shut them down");
-                }
-
-                if (updateListener != null) {
-                    updateListener.close();
-                    updateListener = null;
-                } else {
-                    Log.w(TAG, "No update listener available, can't shut it down");
-                }
-
-                stopSelf();
-            }
+            stopSelf();
         }
     }
 
@@ -600,37 +565,27 @@ public class WidgetManager extends Service {
      * Handle the intent from {@link #onStart(Intent, int)} /
      * {@link #onStartCommand(Intent, int, int)}.
      *
-     * @param intent The intent.
-     *
      * @return True if the intent was handled, false otherwise
      */
-    private boolean handleStart(Intent intent) {
-        if (intent == null) {
-            Log.w(TAG, "Ignored null onStart() intent");
-            return false;
-        } else if (intent.hasExtra(UPDATED_IDS_EXTRA)) {
-            onUpdateInternal(intent.getIntArrayExtra(UPDATED_IDS_EXTRA));
-            return true;
-        } else if (intent.hasExtra(DELETED_IDS_EXTRA)) {
-            onDeletedInternal(intent.getIntArrayExtra(DELETED_IDS_EXTRA));
-            return true;
-        } else if (intent.hasExtra(ALARM_CALL)) {
-            Log.d(TAG, "Periodic alarm received");
-            updateMeasurement();
+    private boolean handleStart() {
+        if (getWidgetIds().length == 0) {
+            // We have no widgets, shut down and drop out
+            close();
             return true;
         } else {
-            return false;
+            onUpdateInternal();
+            return true;
         }
     }
 
     @Override
     public void onStart(Intent intent, int startId) {
-        handleStart(intent);
+        handleStart();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        handleStart(intent);
+        handleStart();
 
         // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
         return START_STICKY;
