@@ -72,12 +72,12 @@ public class WidgetManager extends Service {
      * You need to synchronize on this before accessing any of the other
      * fields of this class.
      */
-    private Object lock = new Object();
+    private Object weatherLock = new Object();
 
     /**
      * The latest weather measurement.
      * <p>
-     * You must synchronize on {@link #lock} before accessing this.
+     * You must synchronize on {@link #weatherLock} before accessing this.
      */
     private JSONObject weather;
 
@@ -137,7 +137,7 @@ public class WidgetManager extends Service {
             }
         }
 
-        synchronized (lock) {
+        synchronized (weatherLock) {
             if (weather != null) {
                 // Non-null weather update, take it!
                 this.weather = weather;
@@ -177,7 +177,7 @@ public class WidgetManager extends Service {
      * @return What the weather is like around here.
      */
     public JSONObject getWeather() {
-        synchronized (lock) {
+        synchronized (weatherLock) {
             return this.weather;
         }
     }
@@ -208,7 +208,7 @@ public class WidgetManager extends Service {
      * @param status A status string.
      */
     public void setStatus(String status) {
-        synchronized (lock) {
+        synchronized (weatherLock) {
             Calendar now = new GregorianCalendar();
 
             this.status =  toHoursString(now) + " " + status;
@@ -226,7 +226,7 @@ public class WidgetManager extends Service {
      * @return A status string.
      */
     public String getStatus() {
-        synchronized (lock) {
+        synchronized (weatherLock) {
             if (status == null) {
                 setStatus("Initializing...");
             }
@@ -470,7 +470,7 @@ public class WidgetManager extends Service {
 
         AppWidgetManager appWidgetManager =
             AppWidgetManager.getInstance(this);
-        synchronized (lock) {
+        synchronized (weatherLock) {
             int[] widgetIds = getWidgetIds();
             if (widgetIds.length == 0) {
                 // No widgets to update, shut down
@@ -506,7 +506,7 @@ public class WidgetManager extends Service {
     private void onUpdateInternal() {
         Log.d(TAG, "onUpdate() called");
 
-        synchronized (lock) {
+        synchronized (weatherLock) {
             if (updateListener == null) {
                 Log.d(TAG, "Have no update listener, registering a new one");
                 updateListener = new UpdateListener(this);
@@ -537,7 +537,7 @@ public class WidgetManager extends Service {
 
         AlarmManager alarmManager =
             (AlarmManager)getSystemService(Context.ALARM_SERVICE);
-        synchronized (lock) {
+        synchronized (weatherLock) {
             if (enabled) {
                 if (!periodicUpdateSet) {
                     alarmManager.setInexactRepeating(
@@ -560,7 +560,7 @@ public class WidgetManager extends Service {
     private void close() {
         Log.d(TAG, "Shutting down...");
 
-        synchronized (lock) {
+        synchronized (weatherLock) {
             setPeriodicUpdatesEnabled(false);
 
             if (updateListener == null) {

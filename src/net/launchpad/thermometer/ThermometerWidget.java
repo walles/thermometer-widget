@@ -22,6 +22,8 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.util.Log;
 
 /**
@@ -56,6 +58,13 @@ public class ThermometerWidget extends AppWidgetProvider {
             if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 Log.d(TAG, "onReceive() faking call to onDeleted()");
                 this.onDeleted(context, new int[] { appWidgetId });
+            }
+        } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
+            NetworkInfo networkInfo =
+                (NetworkInfo)intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
+            if (NetworkInfo.State.CONNECTED.equals(networkInfo.getState())) {
+                Log.d(TAG, "Wifi just came online, triggering update");
+                WidgetManager.onUpdate(context);
             }
         } else {
             super.onReceive(context, intent);
