@@ -280,7 +280,7 @@ public class TemperatureFetcher extends Thread implements Callback {
                 }
             }
 
-            // Wait for the message handler to come available in #run()
+            // Wait for the message handler to become available in #run()
             try {
                 Log.d(TAG, "Waiting 1s for message handler to become available");
                 Thread.sleep(1000);
@@ -295,10 +295,14 @@ public class TemperatureFetcher extends Thread implements Callback {
         Bundle extras = message.peekData();
         if (extras == null) {
             Log.w(TAG, "Got message with no bundle, can't handle it: " + message);
+            widgetManager.setStatus("Internal error in handleMessage()");
+            widgetManager.setWeather(null);
             return false;
         }
         if (!extras.containsKey("latitude") || !extras.containsKey("longitude")) {
             Log.w(TAG, "Message didn't contain both lat and lon, can't handle it: " + message);
+            widgetManager.setStatus("Missing lat/lon in handleMessage()");
+            widgetManager.setWeather(null);
             return false;
         }
 

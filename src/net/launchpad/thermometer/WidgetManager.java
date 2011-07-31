@@ -54,6 +54,11 @@ import android.widget.RemoteViews;
  */
 public class WidgetManager extends Service {
     /**
+     * We don't want to show weather observations older than this.
+     */
+    private static final int MAX_WEATHER_AGE_MINUTES = 190;
+
+    /**
      * Used for tagging log messages.
      */
     private final static String TAG = ThermometerWidget.TAG;
@@ -116,6 +121,22 @@ public class WidgetManager extends Service {
      * @param weather What the weather is like.
      */
     public void setWeather(JSONObject weather) {
+        if (weather != null) {
+            Calendar observationTime;
+            try {
+                observationTime = parseDateTime(weather);
+            } catch (JSONException e) {
+                Log.e(TAG, "Can't parse time from new weather observation, dropping it", e);
+                return;
+            }
+            long observationAgeMinutes =
+                (System.currentTimeMillis() - observationTime.getTimeInMillis()) / (1000 * 60);
+            if (observationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
+                Log.w(TAG, "Ignoring observation from " + observationAgeMinutes + " minutes ago");
+                weather = null;
+            }
+        }
+
         synchronized (lock) {
             if (weather != null) {
                 // Non-null weather update, take it!
@@ -140,11 +161,10 @@ public class WidgetManager extends Service {
                     - lastObservationTime.getTimeInMillis();
                 long lastObservationAgeMinutes =
                     lastObservationAgeMs / (60 * 1000);
-                if (lastObservationAgeMinutes >= 130) {
-                    // Last observation is more than two hours old, meaning
-                    // that we've made four unsuccessful attempts at getting a
-                    // new one.  Give up and null out our weather observation.
-                    this.weather = weather;
+                if (lastObservationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
+                    // Last observation is too old.  Give up and null out our
+                    // weather observation.
+                    this.weather = null;
                 }
             }
         }
@@ -264,6 +284,8 @@ public class WidgetManager extends Service {
         Location currentLocation = getLocation();
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
+            setStatus("Locating phone...");
+            setWeather(null);
         } else {
             temperatureFetcher.fetchTemperature(
                 currentLocation.getLatitude(),
