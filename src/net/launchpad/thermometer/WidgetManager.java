@@ -141,6 +141,7 @@ public class WidgetManager extends Service {
             if (weather != null) {
                 // Non-null weather update, take it!
                 this.weather = weather;
+                updateUi();
             } else if (this.weather == null) {
                 // This block intentionally left blank; weather is already null
             } else {
@@ -151,8 +152,7 @@ public class WidgetManager extends Service {
                 try {
                     lastObservationTime = parseDateTime(this.weather);
                 } catch (JSONException e) {
-                    Log.e(TAG, "Can't parse time from last weather observation, dropping it", e);
-                    this.weather = null;
+                    Log.e(TAG, "Can't parse time from last weather observation, keeping it and hoping for the best", e);
                     return;
                 }
 
@@ -165,6 +165,7 @@ public class WidgetManager extends Service {
                     // Last observation is too old.  Give up and null out our
                     // weather observation.
                     this.weather = null;
+                    updateUi();
                 }
             }
         }
