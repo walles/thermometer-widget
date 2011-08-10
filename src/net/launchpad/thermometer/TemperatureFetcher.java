@@ -189,6 +189,11 @@ public class TemperatureFetcher extends Thread implements Callback {
                 widgetManager.setStatus("Weather server temporarily unavailable [12]");
                 break;
 
+            case 15:
+                // "No observation found"
+                widgetManager.setStatus("Temperature unavailable at current location");
+                break;
+
             default:
                 widgetManager.setStatus(statusMessage);
             }
