@@ -151,5 +151,8 @@ public class WeatherTest {
 
         innerWeather.put("stationName", "gris flaska");
         assertEquals("Gris Flaska", new Weather(outerWeather).getStationName());
+
+        innerWeather.put("stationName", "Coeur d'Alene, Coeur d'Alene Air Terminal");
+        assertEquals("Coeur d'Alene Air Terminal", new Weather(outerWeather).getStationName());
     }
 }

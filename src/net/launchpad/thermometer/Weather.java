@@ -160,6 +160,17 @@ public class Weather {
             ugly = capitalize(ugly);
         }
 
+        // Convert "Coeur d'Alene, Coeur d'Alene Air Terminal"
+        //    into                "Coeur d'Alene Air Terminal"
+        int separatorIndex = ugly.indexOf(", ");
+        if (separatorIndex >= 0) {
+            String left = ugly.substring(0, separatorIndex);
+            String right = ugly.substring(separatorIndex + 2);
+            if (right.startsWith(left)) {
+                ugly = right;
+            }
+        }
+
         // Ugly is now pretty
         return ugly;
     }
