@@ -100,6 +100,71 @@ public class Weather {
     }
 
     /**
+     * Capitalize A String Like This.
+     *
+     * @param capitalizeMe A string to capitalize.
+     *
+     * @return A capitalized version of capitalizeMe.
+     */
+    private String capitalize(String capitalizeMe) {
+        StringBuilder builder = new StringBuilder(capitalizeMe.length());
+        boolean shouldCapitalize = true;
+        for (int i = 0; i < capitalizeMe.length(); i++) {
+            char current = capitalizeMe.charAt(i);
+
+            if (Character.isLetter(current)) {
+                if (shouldCapitalize) {
+                    builder.append(Character.toUpperCase(current));
+                } else {
+                    builder.append(Character.toLowerCase(current));
+                }
+                shouldCapitalize = false;
+            } else if (Character.isWhitespace(current)) {
+                builder.append(current);
+                shouldCapitalize = true;
+            }
+        }
+        return builder.toString();
+    }
+
+    /**
+     * Prettify a station name that we got from the Internet.
+     *
+     * @param ugly An ugly station name.
+     *
+     * @return A pretty station name.
+     */
+    private String prettifyStationName(String ugly) {
+        if (ugly == null) {
+            return null;
+        }
+
+        ugly = ugly.trim();
+        if (ugly.length() == 0) {
+            return null;
+        }
+
+        boolean hasUpper = false;
+        boolean hasLower = false;
+        for (int i = 0; i < ugly.length(); i++) {
+            char current = ugly.charAt(i);
+            if (Character.isUpperCase(current)) {
+                hasUpper = true;
+            } else if (Character.isLowerCase(current)) {
+                hasLower = true;
+            }
+        }
+        if (hasUpper && !hasLower) {
+            ugly = capitalize(ugly);
+        } else if (hasLower && !hasUpper) {
+            ugly = capitalize(ugly);
+        }
+
+        // Ugly is now pretty
+        return ugly;
+    }
+
+    /**
      * Parse the weather from a JSON object.
      *
      * @param weatherObservation The (non-null) weather data.
@@ -124,10 +189,7 @@ public class Weather {
 
                 if (weatherObservation.has("stationName")) {
                     String extractedStationName = weatherObservation.getString("stationName");
-                    if (extractedStationName.length() == 0) {
-                        extractedStationName = null;
-                    }
-                    stationName = extractedStationName;
+                    stationName = prettifyStationName(extractedStationName);
                 } else {
                     stationName = null;
                 }

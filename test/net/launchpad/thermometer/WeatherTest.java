@@ -143,7 +143,13 @@ public class WeatherTest {
         JSONObject outerWeather = new JSONObject();
         outerWeather.put("weatherObservation", innerWeather);
 
-        innerWeather.put("stationName", "gris");
-        assertEquals("gris", new Weather(outerWeather).getStationName());
+        innerWeather.put("stationName", "Gris flaska");
+        assertEquals("Gris flaska", new Weather(outerWeather).getStationName());
+
+        innerWeather.put("stationName", "GRIS FLASKA");
+        assertEquals("Gris Flaska", new Weather(outerWeather).getStationName());
+
+        innerWeather.put("stationName", "gris flaska");
+        assertEquals("Gris Flaska", new Weather(outerWeather).getStationName());
     }
 }
