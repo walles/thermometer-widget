@@ -70,14 +70,16 @@ public class TemperatureFetcher extends Thread implements Callback {
 
     /**
      * Fetch the weather for a given location.
+     * <p>
+     * Has default protection for testing purposes.
      *
      * @param latitude The latitude to get weather for.
      *
      * @param longitude The longitude to get weather for.
      *
-     * @return A JSON object with information from the nearest weather station.
+     * @return Information from the nearest weather station.
      */
-    private JSONObject fetchWeather(double latitude, double longitude) {
+    Weather fetchWeather(double latitude, double longitude) {
         // Create something like:
         // http://ws.geonames.org/findNearByWeatherJSON?lat=43&lng=-2
         // More info here:
@@ -107,12 +109,7 @@ public class TemperatureFetcher extends Thread implements Callback {
             try {
                 jsonString = fetchUrl(url);
 
-                JSONObject weather = parseWeather(jsonString);
-                if (weather != null) {
-                    return weather;
-                } else {
-                    // We didn't get any weather, fall through to keep trying...
-                }
+                return new Weather(new JSONObject(jsonString));
             } catch (UnknownHostException e) {
                 widgetManager.setStatus("Network down, retry in 30min");
                 Log.e(TAG, "Network probably down, not retrying", e);
@@ -123,6 +120,12 @@ public class TemperatureFetcher extends Thread implements Callback {
                 Log.w(TAG, "Error reading weather data on attempt "
                     + attempt + ": " + url,
                     e);
+            } catch (JSONException e) {
+                widgetManager.setStatus("Bad data from weather server");
+                Log.w(TAG, "Bad data from weather server: " + jsonString);
+            } catch (IllegalArgumentException e) {
+                widgetManager.setStatus(e.getMessage());
+                Log.w(TAG, "Error parsing weather", e);
             }
 
             if (!mightRetry) {
@@ -134,83 +137,16 @@ public class TemperatureFetcher extends Thread implements Callback {
                 Log.w(TAG, "Failed after 10 attempts, trying again in 30min");
                 return null;
             }
-        }
-    }
 
-    /**
-     * Parse the weather from a JSON string.
-     *
-     * @param jsonString The weather data.
-     *
-     * @return A JSON object containing a weather observation, or null on
-     * trouble.
-     */
-    private JSONObject parseWeather(String jsonString) {
-        if (jsonString == null) {
-            Log.e(TAG, "Failed reading weather data");
-            return null;
-        }
-
-        try {
-            JSONObject weatherObservation = new JSONObject(jsonString);
-
-            if (weatherObservation.has("weatherObservation")) {
-                // Parse the temperature
-                weatherObservation =
-                    weatherObservation.getJSONObject("weatherObservation");
-
-                Log.d(TAG, "New weather observation received:\n" + jsonString);
-                return weatherObservation;
-            }
-
-            // Assume an error message:
-            // {"status":{"message":"error parsing parameters for lat/lng","value":14}}
-            weatherObservation =
-                weatherObservation.getJSONObject("status");
-            int statusCode = weatherObservation.getInt("value");
-
-            String statusMessage = weatherObservation.getString("message");
-            Log.w(TAG, "Web service trouble: ["
-                + statusCode
-                + "] "
-                + statusMessage);
-
-            switch (statusCode) {
-            case 22:
-                // "The free servers are busy, go away"
-                widgetManager.setStatus("Weather server busy");
-                break;
-
-            case 12:
-                // Probably database trouble at the server side:
-                // "Connection refused. Check that the hostname and port are
-                // correct and that the postmaster is accepting TCP/IP
-                // connections."
-                widgetManager.setStatus("Weather server temporarily unavailable [12]");
-                break;
-
-            case 15:
-                // "No observation found"
-                widgetManager.setStatus("Temperature unavailable at current location");
-                break;
-
-            default:
-                widgetManager.setStatus(statusMessage);
-            }
-
-            Log.d(TAG, "Sleeping for 23s");
             try {
+                // A fetch takes about 7s, wait 23 more to retry twice
+                // per minute
                 Thread.sleep(23000);
             } catch (InterruptedException e) {
+                widgetManager.setStatus("Weather fetch interrupted");
+                Log.w(TAG, "Interrupted waiting for weather from server", e);
                 return null;
             }
-
-            return null;
-        } catch (JSONException e) {
-            Log.e(TAG, "Parsing weather data failed:\n"
-                + jsonString, e);
-            widgetManager.setStatus("Error parsing weather data");
-            return null;
         }
     }
 
@@ -311,12 +247,13 @@ public class TemperatureFetcher extends Thread implements Callback {
             return false;
         }
 
-        // Returning true means that we have handled the message according to:
-        // http://code.google.com/p/android/issues/detail?id=6464
-        JSONObject weather =
+        Weather weather =
             fetchWeather(extras.getDouble("latitude"), extras.getDouble("longitude"));
         widgetManager.setWeather(weather);
         widgetManager.updateUi();
+
+        // Returning true means that we have handled the message according to:
+        // http://code.google.com/p/android/issues/detail?id=6464
         return true;
     }
 }

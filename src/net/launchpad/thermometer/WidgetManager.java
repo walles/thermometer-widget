@@ -21,13 +21,6 @@ package net.launchpad.thermometer;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -79,7 +72,7 @@ public class WidgetManager extends Service {
      * <p>
      * You must synchronize on {@link #weatherLock} before accessing this.
      */
-    private JSONObject weather;
+    private Weather weather;
 
     /**
      * Has the periodic updates alarm been registered?
@@ -120,17 +113,15 @@ public class WidgetManager extends Service {
      *
      * @param weather What the weather is like.
      */
-    public void setWeather(JSONObject weather) {
+    public void setWeather(Weather weather) {
         if (weather != null) {
-            Calendar observationTime;
-            try {
-                observationTime = parseDateTime(weather);
-            } catch (JSONException e) {
-                Log.e(TAG, "Can't parse time from new weather observation, dropping it", e);
+            if (weather.getObservationTime() == null) {
+                Log.e(TAG, "New weather observation has no time stamp, dropping it");
                 return;
             }
+
             long observationAgeMinutes =
-                (System.currentTimeMillis() - observationTime.getTimeInMillis()) / (1000 * 60);
+                (System.currentTimeMillis() - weather.getObservationTime().getTimeInMillis()) / (1000 * 60);
             if (observationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
                 Log.w(TAG, "Ignoring observation from " + observationAgeMinutes + " minutes ago");
                 weather = null;
@@ -148,17 +139,14 @@ public class WidgetManager extends Service {
                 // Null weather update, only take it if our most recent
                 // observation is getting too aged.
 
-                Calendar lastObservationTime;
-                try {
-                    lastObservationTime = parseDateTime(this.weather);
-                } catch (JSONException e) {
-                    Log.e(TAG, "Can't parse time from last weather observation, keeping it and hoping for the best", e);
+                if (this.weather.getObservationTime() == null) {
+                    Log.e(TAG, "Last weather observation has no time stamp, keeping it and hoping for the best");
                     return;
                 }
 
                 long lastObservationAgeMs =
                     System.currentTimeMillis()
-                    - lastObservationTime.getTimeInMillis();
+                    - this.weather.getObservationTime().getTimeInMillis();
                 long lastObservationAgeMinutes =
                     lastObservationAgeMs / (60 * 1000);
                 if (lastObservationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
@@ -176,7 +164,7 @@ public class WidgetManager extends Service {
      *
      * @return What the weather is like around here.
      */
-    public JSONObject getWeather() {
+    public Weather getWeather() {
         synchronized (weatherLock) {
             return this.weather;
         }
@@ -314,49 +302,11 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
-     */
-    private final Pattern DATE_PARSE =
-        Pattern.compile("([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)");
-
-    /**
-     * Convert a string to a Calendar object.
-     *
-     * @param timeString An UTC time stamp in the following format: "2010-07-29 10:20:00"
-     *
-     * @return A calendar object representing the same time as the timeString
-     *
-     * @throws RuntimeException if the string cannot be parsed
-     */
-    private Calendar parseDateTime(String timeString) {
-        Matcher match = DATE_PARSE.matcher(timeString);
-        if (!match.matches()) {
-            throw new RuntimeException("Can't parse time string: " + timeString);
-        }
-
-        int year = Integer.valueOf(match.group(1));
-        int month = Integer.valueOf(match.group(2));
-        int day = Integer.valueOf(match.group(3));
-
-        int hour = Integer.valueOf(match.group(4));
-        int minute = Integer.valueOf(match.group(5));
-        int second = Integer.valueOf(match.group(6));
-
-        Calendar utcCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
-        utcCalendar.set(year, month, day, hour, minute, second);
-
-        // Convert from UTC to the local time zone
-        Calendar calendar = new GregorianCalendar();
-        calendar.setTime(utcCalendar.getTime());
-        return calendar;
-    }
-
-    /**
      * Refresh the widget display.
      */
     public void updateUi() {
         Log.d(TAG, "Updating widget display...");
-        JSONObject weatherObservation = getWeather();
+        Weather weatherObservation = getWeather();
 
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(this);
@@ -365,73 +315,35 @@ public class WidgetManager extends Service {
         String degrees = "--";
         String metadata = getStatus();
         if (weatherObservation != null) {
-            try {
-                double centigrades =
-                    weatherObservation.getInt("temperature");
-                double windKnots = weatherObservation.getDouble("windSpeed");
-                degrees = Long.toString(Math.round(centigrades));
-                Calendar date =
-                    parseDateTime(weatherObservation);
-                Log.d(TAG,
-                    String.format("Weather data is %dC, %dkts observed %sUTC at %s",
-                        Math.round(centigrades),
-                        Math.round(windKnots),
-                        weatherObservation.getString("datetime"),
-                        weatherObservation.getString("stationName")));
+            Log.d(TAG, "Weather data is " + weatherObservation);
 
-                if (preferences.getBoolean("showMetadataPref", false)) {
-                    metadata =
-                        toHoursString(date)
-                        + " "
-                        + weatherObservation.getString("stationName");
-                } else {
-                    metadata = "";
+            if (preferences.getBoolean("showMetadataPref", false)) {
+                metadata =
+                    toHoursString(weatherObservation.getObservationTime()).toString();
+                if (weatherObservation.getStationName() != null) {
+                    metadata += " " + weatherObservation.getStationName();
                 }
-
-                if (preferences.getBoolean("windChillPref", false)) {
-                    double windKmh = 1.85 * windKnots;
-
-                    // From: http://en.wikipedia.org/wiki/Wind_chill#North_American_wind_chill_index
-                    if (centigrades > 10.0) {
-                        Log.d(TAG, "Not computing wind chill over 10C: "
-                            + Math.round(centigrades) + "C");
-                    } else if (windKmh < 4.8) {
-                        Log.d(TAG, "Not computing wind chill under 4.8km/h: "
-                            + Math.round(windKmh) + "km/h");
-                    } else {
-                        double windKmhTo0_16 = Math.pow(windKmh, 0.16);
-                        double adjustedCentigrades =
-                            13.12
-                            + 0.6215 * centigrades
-                            - 11.37 *  windKmhTo0_16
-                            + 0.3965 * centigrades * windKmhTo0_16;
-
-                        if (Math.round(adjustedCentigrades) != Math.round(centigrades)) {
-                            centigrades = adjustedCentigrades;
-                            Log.d(TAG,
-                                "Temperature adjusted for wind chill to "
-                                + Math.round(centigrades) + "C");
-                            windChillComputed = true;
-                        } else {
-                            Log.d(TAG,
-                                "Wind chill adjustment didn't change centigrades: "
-                                + Math.round(centigrades));
-                        }
-                        degrees = Long.toString(Math.round(centigrades));
-                    }
-                } else {
-                    Log.d(TAG, "Wind chill calculations not enabled, sticking to "
-                        + Math.round(centigrades) + "C");
-                }
-
-                if ("Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"))) {
-                    double farenheit = centigrades * 9.0 / 5.0 + 32.0;
-                    degrees = Long.toString(Math.round(farenheit));
-                }
-            } catch (JSONException e) {
-                Log.e(TAG, "Parsing weather data failed:\n"
-                    + weatherObservation, e);
+            } else {
+                metadata = "";
             }
+
+            boolean withWindChill =
+                preferences.getBoolean("windChillPref", false);
+            boolean inFarenheit =
+                "Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"));
+
+            int unchilledDegrees;
+            int chilledDegrees;
+            if (inFarenheit) {
+                // Liberian users and some others
+                chilledDegrees = weatherObservation.getFarenheit(withWindChill);
+                unchilledDegrees = weatherObservation.getFarenheit(false);
+            } else {
+                chilledDegrees = weatherObservation.getCentigrades(withWindChill);
+                unchilledDegrees = weatherObservation.getCentigrades(false);
+            }
+            degrees = Integer.toString(chilledDegrees);
+            windChillComputed = (chilledDegrees != unchilledDegrees);
         }
 
         // Publish the fetched temperature
@@ -457,7 +369,7 @@ public class WidgetManager extends Service {
             preferences.getInt("textColorPref", Color.WHITE));
 
         Intent intent;
-        if (isPositioningEnabled()) {
+        if (isPositioningEnabled() || isRunningOnEmulator()) {
             // Tell widget to launch the preferences activity on click
             intent = new Intent(this, ThermometerConfigure.class);
         } else {
@@ -482,21 +394,6 @@ public class WidgetManager extends Service {
         }
 
         Log.d(TAG, "UI updated");
-    }
-
-    /**
-     * Extract a time stamp from a weather observation.
-     *
-     * @param weatherObservation The weather observation
-     *
-     * @return When the weather was observed.
-     *
-     * @throws JSONException If parsing the JSON object fails.
-     */
-    private Calendar parseDateTime(JSONObject weatherObservation)
-        throws JSONException
-    {
-        return parseDateTime(weatherObservation.getString("datetime"));
     }
 
     /**
