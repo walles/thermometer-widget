@@ -132,15 +132,22 @@ public class Weather {
                     stationName = null;
                 }
 
+                String fromStation = "";
+                if (stationName != null) {
+                    fromStation = " from " + stationName;
+                }
+
                 if (!weatherObservation.has("temperature")) {
-                    String fromStation = "";
-                    if (stationName != null) {
-                        fromStation = " from " + stationName;
-                    }
                     throw new IllegalArgumentException("No temperature received"
                         + fromStation);
                 }
-                centigrades = weatherObservation.getInt("temperature");
+
+                try {
+                    centigrades = weatherObservation.getInt("temperature");
+                } catch (JSONException e) {
+                    throw new IllegalArgumentException("Borken temperature received"
+                        + fromStation, e);
+                }
 
                 if (weatherObservation.has("windSpeed")) {
                     windKnots = weatherObservation.getDouble("windSpeed");
