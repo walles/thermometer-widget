@@ -154,5 +154,8 @@ public class WeatherTest {
 
         innerWeather.put("stationName", "Coeur d'Alene, Coeur d'Alene Air Terminal");
         assertEquals("Coeur d'Alene Air Terminal", new Weather(outerWeather).getStationName());
+
+        innerWeather.put("stationName", "ANGELHOLM (SWE-A");
+        assertEquals("Angelholm", new Weather(outerWeather).getStationName());
     }
 }

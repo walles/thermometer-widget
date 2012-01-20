@@ -122,6 +122,8 @@ public class Weather {
             } else if (Character.isWhitespace(current)) {
                 builder.append(current);
                 shouldCapitalize = true;
+            } else {
+                builder.append(current);
             }
         }
         return builder.toString();
@@ -158,6 +160,13 @@ public class Weather {
             ugly = capitalize(ugly);
         } else if (hasLower && !hasUpper) {
             ugly = capitalize(ugly);
+        }
+
+        // Chop off any unfinished parenthesis
+        int leftParen = ugly.indexOf('(');
+        if (leftParen > 0 && ugly.indexOf(')') < 0) {
+            ugly = ugly.substring(0, leftParen);
+            ugly = ugly.trim();
         }
 
         // Convert "Coeur d'Alene, Coeur d'Alene Air Terminal"
