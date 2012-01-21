@@ -135,10 +135,8 @@ public class WidgetManager extends Service {
                 return;
             }
 
-            long observationAgeMinutes =
-                (System.currentTimeMillis() - weather.getObservationTime().getTimeInMillis()) / (1000 * 60);
-            if (observationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
-                Log.w(TAG, "Ignoring observation from " + observationAgeMinutes + " minutes ago");
+            if (weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
+                Log.w(TAG, "Ignoring observation from " + weather.getAgeMinutes() + " minutes ago");
                 weather = null;
             }
         }
@@ -159,12 +157,7 @@ public class WidgetManager extends Service {
                     return;
                 }
 
-                long lastObservationAgeMs =
-                    System.currentTimeMillis()
-                    - this.weather.getObservationTime().getTimeInMillis();
-                long lastObservationAgeMinutes =
-                    lastObservationAgeMs / (60 * 1000);
-                if (lastObservationAgeMinutes > MAX_WEATHER_AGE_MINUTES) {
+                if (this.weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
                     // Last observation is too old.  Give up and null out our
                     // weather observation.
                     this.weather = null;
