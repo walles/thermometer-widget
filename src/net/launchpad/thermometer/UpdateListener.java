@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
@@ -26,12 +27,15 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 /**
  * Listens for events and requests widget updates as required.
  */
 public class UpdateListener
+extends PhoneStateListener
 implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
 {
     /**
@@ -65,6 +69,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
             50000, // Every 50km we move
             this);
 
+        TelephonyManager telephonyManager = getTelephonyManager();
+        if (telephonyManager != null) {
+            telephonyManager.listen(this, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE);
+        }
+
         Log.d(TAG, "Registering preferences change notification listener");
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(widgetManager);
@@ -88,6 +97,17 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         return locationManager;
     }
 
+    /**
+     * Get a maybe-null telephony manager.
+     *
+     * @return A telephony manager, or null.
+     */
+    private TelephonyManager getTelephonyManager() {
+        TelephonyManager telephonyManager =
+            (TelephonyManager)widgetManager.getSystemService(Context.TELEPHONY_SERVICE);
+        return telephonyManager;
+    }
+
     public void onSharedPreferenceChanged(SharedPreferences preferences,
         String key)
     {
@@ -106,6 +126,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
             PreferenceManager.getDefaultSharedPreferences(widgetManager);
         preferences.unregisterOnSharedPreferenceChangeListener(this);
         getLocationManager().removeUpdates(this);
+
+        TelephonyManager telephonyManager = getTelephonyManager();
+        if (telephonyManager != null) {
+            telephonyManager.listen(this, PhoneStateListener.LISTEN_NONE);
+        }
     }
 
     public void onLocationChanged(Location networkLocation) {
@@ -114,7 +139,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
             networkLocation.getLongitude()));
 
         // Take a new measurement at our current location
-        widgetManager.updateMeasurement();
+        widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
     }
 
     public void onProviderDisabled(String provider) {
@@ -153,5 +178,14 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
                     + provider);
             }
         }
+    }
+
+    @Override
+    public void onDataConnectionStateChanged(int state) {
+        if (state != TelephonyManager.DATA_CONNECTED) {
+            return;
+        }
+
+        WidgetManager.onUpdate(widgetManager, UpdateReason.NETWORK_AVAILABLE);
     }
 }

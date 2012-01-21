@@ -57,6 +57,11 @@ public class WidgetManager extends Service {
     private final static String TAG = ThermometerWidget.TAG;
 
     /**
+     * Used for tagging update intents with why they were sent.
+     */
+    private final static String UPDATE_REASON = "Update Reason";
+
+    /**
      * Listens for events and requests widget updates as required.
      */
     private UpdateListener updateListener;
@@ -91,6 +96,13 @@ public class WidgetManager extends Service {
     private TemperatureFetcher temperatureFetcher;
 
     /**
+     * When was the last time we were informed that some network came on-line?
+     *
+     * @see System#currentTimeMillis()
+     */
+    private long lastNetworkAvailableMs = 0;
+
+    /**
      * Create a new widget manager.
      */
     public WidgetManager() {
@@ -102,9 +114,12 @@ public class WidgetManager extends Service {
      * Update / initialize / shut down widgets.
      *
      * @param context Used for creating a widget update {@link Intent}.
+     *
+     * @param why Why the update is wanted.
      */
-    public static void onUpdate(Context context) {
+    public static void onUpdate(Context context, UpdateReason why) {
         Intent intent = new Intent(context, WidgetManager.class);
+        intent.putExtra(UPDATE_REASON, why.name());
         context.startService(intent);
     }
 
@@ -265,21 +280,76 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Take a new weather measurement for the widget to display.
+     * The reason for a call to {@link WidgetManager#updateMeasurement(UpdateReason)}.
      */
-    public void updateMeasurement() {
-        Log.d(TAG, "Initiating new weather observation fetch...");
+    public enum UpdateReason {
+        /**
+         * Don't know, please don't use.
+         */
+        UNKNOWN,
+
+        /**
+         * We just got network connectivity.
+         */
+        NETWORK_AVAILABLE,
+
+        /**
+         * We moved.
+         */
+        LOCATION_CHANGED,
+
+        /**
+         * The display needs updating, or the regular-updates timer has expired.
+         */
+        DISPLAY_OR_TIMER
+    }
+
+    /**
+     * Take a new weather measurement for the widget to display.
+     *
+     * @param why Why should the temperature be updated?
+     */
+    public void updateMeasurement(UpdateReason why) {
+        if (why == null) {
+            why = UpdateReason.UNKNOWN;
+        }
+        Log.d(TAG, "Initiating new weather observation fetch (" + why + ")...");
 
         Location currentLocation = getLocation();
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
             setStatus("Locating phone...");
             setWeather(null);
-        } else {
-            temperatureFetcher.fetchTemperature(
-                currentLocation.getLatitude(),
-                currentLocation.getLongitude());
+            return;
         }
+
+        if (why == UpdateReason.NETWORK_AVAILABLE) {
+            synchronized (weatherLock) {
+                long lastUpdateMsAgo =
+                    System.currentTimeMillis() - lastNetworkAvailableMs;
+                long lastUpdateMinutesAgo = lastUpdateMsAgo / (60 * 1000);
+
+                if (lastUpdateMinutesAgo < 30) {
+                    Log.d(TAG,
+                        "Last network-available update "
+                            + lastUpdateMinutesAgo
+                            + " minutes ago, want at least 30, skipping");
+                    return;
+                }
+                lastNetworkAvailableMs = System.currentTimeMillis();
+
+                if (weather != null && weather.getAgeMinutes() < 45) {
+                    Log.d(TAG, "Network available, but current observation fresh, skipping");
+                    return;
+                }
+            }
+
+            Log.d(TAG, "Network available, updating!");
+        }
+
+        temperatureFetcher.fetchTemperature(
+            currentLocation.getLatitude(),
+            currentLocation.getLongitude());
     }
 
     /**
@@ -398,9 +468,11 @@ public class WidgetManager extends Service {
 
     /**
      * Dispatched from {@link #onStart(Intent, int)}, call through
-     * {@link #onUpdate(Context)}.
+     * {@link #onUpdate(Context, UpdateReason)}.
+     *
+     * @param intent The intent triggering this request.
      */
-    private void onUpdateInternal() {
+    private void onUpdateInternal(Intent intent) {
         Log.d(TAG, "onUpdate() called");
 
         synchronized (weatherLock) {
@@ -418,7 +490,20 @@ public class WidgetManager extends Service {
         updateUi();
 
         // Schedule a temperature update
-        updateMeasurement();
+        UpdateReason why;
+        String reasonName = null;
+        try {
+            reasonName = intent.getStringExtra(UPDATE_REASON);
+            if (reasonName != null) {
+                why = UpdateReason.valueOf(reasonName);
+            } else {
+                why = UpdateReason.UNKNOWN;
+            }
+        } catch (IllegalArgumentException e) {
+            Log.w(TAG, "Unsupported update reason: <" + reasonName + ">");
+            why = UpdateReason.UNKNOWN;
+        }
+        updateMeasurement(why);
     }
 
     /**
@@ -485,27 +570,29 @@ public class WidgetManager extends Service {
      * Handle the intent from {@link #onStart(Intent, int)} /
      * {@link #onStartCommand(Intent, int, int)}.
      *
+     * @param intent the intent from onStart() / onStartCommand().
+     *
      * @return True if the intent was handled, false otherwise
      */
-    private boolean handleStart() {
+    private boolean handleStart(Intent intent) {
         if (getWidgetIds().length == 0) {
             // We have no widgets, shut down and drop out
             close();
             return true;
         } else {
-            onUpdateInternal();
+            onUpdateInternal(intent);
             return true;
         }
     }
 
     @Override
     public void onStart(Intent intent, int startId) {
-        handleStart();
+        handleStart(intent);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        handleStart();
+        handleStart(intent);
 
         // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
         return START_STICKY;

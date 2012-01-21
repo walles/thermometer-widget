@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
@@ -43,7 +44,7 @@ public class ThermometerWidget extends AppWidgetProvider {
         AppWidgetManager appWidgetManager,
         int[] appWidgetIds)
     {
-        WidgetManager.onUpdate(context);
+        WidgetManager.onUpdate(context, UpdateReason.DISPLAY_OR_TIMER);
     }
 
     @Override
@@ -64,7 +65,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                 (NetworkInfo)intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
             if (NetworkInfo.State.CONNECTED.equals(networkInfo.getState())) {
                 Log.d(TAG, "Wifi just came online, triggering update");
-                WidgetManager.onUpdate(context);
+                WidgetManager.onUpdate(context, UpdateReason.NETWORK_AVAILABLE);
             }
         } else {
             super.onReceive(context, intent);
@@ -73,6 +74,6 @@ public class ThermometerWidget extends AppWidgetProvider {
 
     @Override
     public synchronized void onDeleted(Context context, int[] deletedIds) {
-        WidgetManager.onUpdate(context);
+        WidgetManager.onUpdate(context, UpdateReason.DISPLAY_OR_TIMER);
     }
 }

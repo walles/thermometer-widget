@@ -360,4 +360,20 @@ public class Weather {
         return String.format("%dC, %.1fkts at %s on %s",
             centigrades, windKnots, stationName, observationTime);
     }
+
+    /**
+     * How many minutes old is this observation?
+     *
+     * @return The age of this observation in minutes.
+     */
+    public int getAgeMinutes() {
+        if (observationTime == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        long ageMs =
+            System.currentTimeMillis() - observationTime.getTimeInMillis();
+
+        return (int)(ageMs / (60 * 1000));
+    }
 }
