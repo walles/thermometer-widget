@@ -267,7 +267,7 @@ public class Weather {
 
             case 15:
                 // "No observation found"
-                throw new IllegalArgumentException("Temperature unavailable at current location");
+                throw new IllegalArgumentException("No weather stations nearby");
 
             default:
                 throw new IllegalArgumentException(statusMessage);
