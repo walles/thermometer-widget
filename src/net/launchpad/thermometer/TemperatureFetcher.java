@@ -48,6 +48,11 @@ public class TemperatureFetcher extends Thread implements Callback {
     private final static String TAG = ThermometerWidget.TAG;
 
     /**
+     * When did we last fetch the weather successfully?
+     */
+    private long lastSuccessfulFetch = 0;
+
+    /**
      * Widget controller.
      */
     private WidgetManager widgetManager;
@@ -77,9 +82,19 @@ public class TemperatureFetcher extends Thread implements Callback {
      *
      * @param longitude The longitude to get weather for.
      *
-     * @return Information from the nearest weather station.
+     * @return Information from the nearest weather station, or null.
      */
     Weather fetchWeather(double latitude, double longitude) {
+        long minutesSinceLastSuccess;
+        synchronized (this) {
+            minutesSinceLastSuccess =
+                (System.currentTimeMillis() - lastSuccessfulFetch) / (60 * 1000);
+        }
+        if (minutesSinceLastSuccess < 17) {
+            Log.d(TAG, "Last successful fetch was " + minutesSinceLastSuccess + " minutes ago, skipping");
+            return null;
+        }
+
         // Create something like:
         // http://ws.geonames.org/findNearByWeatherJSON?lat=43&lng=-2
         // More info here:
@@ -109,7 +124,15 @@ public class TemperatureFetcher extends Thread implements Callback {
             try {
                 jsonString = fetchUrl(url);
 
-                return new Weather(new JSONObject(jsonString));
+                Weather weather = new Weather(new JSONObject(jsonString));
+
+                if (weather != null) {
+                    synchronized (this) {
+                        lastSuccessfulFetch = System.currentTimeMillis();
+                    }
+                }
+
+                return weather;
             } catch (UnknownHostException e) {
                 widgetManager.setStatus("Network down, retry in 30min");
                 Log.e(TAG, "Network probably down, not retrying", e);
