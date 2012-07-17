@@ -108,6 +108,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         return telephonyManager;
     }
 
+    @Override
     public void onSharedPreferenceChanged(SharedPreferences preferences,
         String key)
     {
@@ -133,6 +134,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         }
     }
 
+    @Override
     public void onLocationChanged(Location networkLocation) {
         Log.d(TAG, String.format("Location updated to lat=%.4f, lon=%.4f",
             networkLocation.getLatitude(),
@@ -142,6 +144,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
     }
 
+    @Override
     public void onProviderDisabled(String provider) {
         if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             Log.e(TAG, "Location provider disabled: " + provider);
@@ -149,6 +152,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         }
     }
 
+    @Override
     public void onProviderEnabled(String provider) {
         if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             Log.i(TAG, "Location provider enabled: " + provider);
@@ -156,6 +160,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         }
     }
 
+    @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
         if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
             switch (status) {

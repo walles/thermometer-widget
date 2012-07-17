@@ -124,6 +124,7 @@ implements Preference.OnPreferenceClickListener
         preferenceChangeListener =
             new SharedPreferences.OnSharedPreferenceChangeListener()
         {
+            @Override
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
                 if (preference.getKey().equals(key)) {
                     Log.d(TAG, "Color preference updated, updating prefs UI: " + key);
@@ -159,6 +160,7 @@ implements Preference.OnPreferenceClickListener
 
     // The variable hiding doesn't matter since the two "preference" variables
     // should both be the same. /Johan - 2010aug19
+    @Override
     @SuppressWarnings("hiding")
     public boolean onPreferenceClick(Preference preference) {
         launchColorPicker(getColor());
@@ -193,6 +195,7 @@ implements Preference.OnPreferenceClickListener
         builder.setMessage("Android Market not available on this phone, color picker can't be installed.");
         builder.setCancelable(true);
         builder.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+            @Override
             public void onClick(DialogInterface dialog, int which) {
                 dialog.cancel();
             }
@@ -232,11 +235,13 @@ implements Preference.OnPreferenceClickListener
             + "The color picker is required for you to configure widget colors.");
         builder.setCancelable(true);
         builder.setPositiveButton("Install", new DialogInterface.OnClickListener() {
+            @Override
             public void onClick(DialogInterface dialog, int id) {
                 launchColorPickerInstaller();
             }
         });
         builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            @Override
             public void onClick(DialogInterface dialog, int id) {
                 dialog.cancel();
             }

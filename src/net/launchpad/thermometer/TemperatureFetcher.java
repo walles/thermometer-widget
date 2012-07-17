@@ -254,6 +254,7 @@ public class TemperatureFetcher extends Thread implements Callback {
         }
     }
 
+    @Override
     public boolean handleMessage(Message message) {
         Log.d(TAG, "Fetcher got temperature request...");
         Bundle extras = message.peekData();

@@ -59,6 +59,7 @@ public class ThermometerConfigure extends PreferenceActivity {
             (ListPreference)findPreference("temperatureUnitPref");
         temperatureUnits.setSummary(temperatureUnits.getValue());
         temperatureUnits.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+            @Override
             public boolean onPreferenceChange(Preference preference, Object value) {
                 ((ListPreference)preference).setSummary(value.toString());
 
