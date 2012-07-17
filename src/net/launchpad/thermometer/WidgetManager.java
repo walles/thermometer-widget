@@ -21,6 +21,7 @@ package net.launchpad.thermometer;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -483,10 +484,23 @@ public class WidgetManager extends Service {
         updateUi();
 
         // Schedule a temperature update
+        scheduleTemperatureUpdate(intent);
+    }
+
+    /**
+     * Schedule a temperature update because of an incoming event.
+     * <p>
+     * NOTE: This method has default protection for testing purposes
+     *
+     * @param intent The intent that triggered the update.
+     */
+    void scheduleTemperatureUpdate(Intent intent) {
         UpdateReason why;
         String reasonName = null;
         try {
-            reasonName = intent.getStringExtra(UPDATE_REASON);
+            if (intent != null) {
+                reasonName = intent.getStringExtra(UPDATE_REASON);
+            }
             if (reasonName != null) {
                 why = UpdateReason.valueOf(reasonName);
             } else {
