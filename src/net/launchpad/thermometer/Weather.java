@@ -73,7 +73,7 @@ public class Weather {
         }
 
         int year = Integer.valueOf(match.group(1));
-        int month = Integer.valueOf(match.group(2));
+        int month = Integer.valueOf(match.group(2)) - 1;
         int day = Integer.valueOf(match.group(3));
 
         int hour = Integer.valueOf(match.group(4));
@@ -205,6 +205,7 @@ public class Weather {
 
                 if (weatherObservation.has("datetime")) {
                     observationTime = toLocal(parseDateTime(weatherObservation.getString("datetime")));
+                    Log.d(TAG, "  New observation is " + getAgeMinutes() + " minutes old");
                 }
 
                 if (weatherObservation.has("stationName")) {

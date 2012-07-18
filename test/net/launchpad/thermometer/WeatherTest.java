@@ -1,5 +1,10 @@
 package net.launchpad.thermometer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.powermock.api.mockito.PowerMockito.mockStatic;
+
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -12,9 +17,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import android.util.Log;
-
-import static org.junit.Assert.*;
-import static org.powermock.api.mockito.PowerMockito.*;
 
 /**
  * Validate {@link Weather}.
@@ -37,7 +39,7 @@ public class WeatherTest {
             Weather.parseDateTime("2010-07-19 15:03:04");
 
         Calendar expected = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
-        expected.set(2010, 7, 19, 15, 3, 4);
+        expected.set(2010, Calendar.JULY, 19, 15, 3, 4);
 
         final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy MMM dd hh:mm zz");
         assertEquals(

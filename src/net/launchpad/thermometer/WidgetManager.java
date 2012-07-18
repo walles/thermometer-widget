@@ -333,7 +333,8 @@ public class WidgetManager extends Service {
                 lastNetworkAvailableMs = System.currentTimeMillis();
 
                 if (weather != null && weather.getAgeMinutes() < 45) {
-                    Log.d(TAG, "Network available, but current observation fresh, skipping");
+                    Log.d(TAG, String.format("Network available, but current observation is %d minutes fresh, skipping",
+                            weather.getAgeMinutes()));
                     return;
                 }
             }
@@ -344,7 +345,9 @@ public class WidgetManager extends Service {
         if (why != UpdateReason.LOCATION_CHANGED) {
             synchronized (weatherLock) {
                 if (weather != null && weather.getAgeMinutes() < 30) {
-                    Log.d(TAG, String.format("Current observation is fresh (%d minutes) and we haven't moved, skipping", weather.getAgeMinutes()));
+                    Log.d(TAG,
+                            String.format("Current observation is %d minutes fresh and we haven't moved, skipping",
+                                    weather.getAgeMinutes()));
                     return;
                 }
             }
