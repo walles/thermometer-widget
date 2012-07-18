@@ -23,6 +23,12 @@ import android.util.Log;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({WidgetManager.class, Log.class})
 public class WidgetManagerTest {
+    /**
+     * Verify that {@link WidgetManager#scheduleTemperatureUpdate(Intent)}
+     * can handle a null intent.
+     *
+     * @throws Exception if testing goes exceptionally bad
+     */
     @Test
     public void testScheduleTemperatureUpdate() throws Exception {
         // Avoid running the Service constructor

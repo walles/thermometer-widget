@@ -4,19 +4,17 @@
               android:layout_width="fill_parent"
               android:layout_height="fill_parent"
               android:id="@+id/AllOfIt">
+
   <TextView
-     android:id="@+id/TemperatureView"
-     android:layout_width="fill_parent" 
-     android:layout_height="wrap_content"
-     android:layout_weight="1"
-     
-     android:text="--°"
-     
-     android:textColor="#fff"
-     android:textSize="40dip"
-     android:textStyle="bold"
-     android:gravity="center"
-     />
+      android:id="@+id/TemperatureView"
+      android:layout_width="fill_parent"
+      android:layout_height="0dip"
+      android:layout_weight="1"
+      android:gravity="center"
+      android:text="@string/no_temperature"
+      android:textColor="#fff"
+      android:textSize="40dip"
+      android:textStyle="bold" />
 
   <TextView
      android:id="@+id/MetadataView"
