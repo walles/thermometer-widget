@@ -341,6 +341,15 @@ public class WidgetManager extends Service {
             Log.d(TAG, "Network available, updating!");
         }
 
+        if (why != UpdateReason.LOCATION_CHANGED) {
+            synchronized (weatherLock) {
+                if (weather != null && weather.getAgeMinutes() < 30) {
+                    Log.d(TAG, "Current observation is fresh and we haven't moved, skipping");
+                    return;
+                }
+            }
+        }
+
         temperatureFetcher.fetchTemperature(
             currentLocation.getLatitude(),
             currentLocation.getLongitude());
