@@ -344,7 +344,7 @@ public class WidgetManager extends Service {
         if (why != UpdateReason.LOCATION_CHANGED) {
             synchronized (weatherLock) {
                 if (weather != null && weather.getAgeMinutes() < 30) {
-                    Log.d(TAG, String.format("Current observation is fresh (%d) and we haven't moved, skipping", weather.getAgeMinutes()));
+                    Log.d(TAG, String.format("Current observation is fresh (%d minutes) and we haven't moved, skipping", weather.getAgeMinutes()));
                     return;
                 }
             }
