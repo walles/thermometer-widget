@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -34,11 +35,6 @@ import android.util.Log;
  * @author johan.walles@gmail.com
  */
 public class ThermometerConfigure extends PreferenceActivity {
-    /**
-     * Used for tagging log messages.
-     */
-    private final static String TAG = ThermometerWidget.TAG;
-
     /**
      * Request code for text color.
      */

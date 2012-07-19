@@ -18,6 +18,8 @@
 
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -50,12 +52,7 @@ public class WidgetManager extends Service {
     /**
      * We don't want to show weather observations older than this.
      */
-    private static final int MAX_WEATHER_AGE_MINUTES = 190;
-
-    /**
-     * Used for tagging log messages.
-     */
-    private final static String TAG = ThermometerWidget.TAG;
+    private static final int MAX_WEATHER_AGE_MINUTES = 150;
 
     /**
      * Used for tagging update intents with why they were sent.
@@ -307,7 +304,7 @@ public class WidgetManager extends Service {
         if (why == null) {
             why = UpdateReason.UNKNOWN;
         }
-        Log.d(TAG, "Initiating new weather observation fetch (" + why + ")...");
+        Log.d(TAG, "Weather observation fetch requested (" + why + ")...");
 
         Location currentLocation = getLocation();
         if (currentLocation == null) {
@@ -331,15 +328,7 @@ public class WidgetManager extends Service {
                     return;
                 }
                 lastNetworkAvailableMs = System.currentTimeMillis();
-
-                if (weather != null && weather.getAgeMinutes() < 45) {
-                    Log.d(TAG, String.format("Network available, but current observation is %d minutes fresh, skipping",
-                            weather.getAgeMinutes()));
-                    return;
-                }
             }
-
-            Log.d(TAG, "Network available, updating!");
         }
 
         if (why != UpdateReason.LOCATION_CHANGED) {

@@ -1,5 +1,8 @@
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
@@ -18,15 +21,16 @@ import android.util.Log;
  */
 public class Weather {
     /**
-     * Tag used for logging.
-     */
-    private final static String TAG = "Weather";
-
-    /**
      * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
      */
     private final static Pattern DATE_PARSE =
         Pattern.compile("([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)");
+
+    /**
+     * Used by {@link #toString()}.
+     */
+    private final static SimpleDateFormat FORMATTER =
+            new SimpleDateFormat("yyyy MMM dd hh:mm zz");
 
     /**
      * The temperature in Celsius.
@@ -205,7 +209,7 @@ public class Weather {
 
                 if (weatherObservation.has("datetime")) {
                     observationTime = toLocal(parseDateTime(weatherObservation.getString("datetime")));
-                    Log.d(TAG, "  New observation is " + getAgeMinutes() + " minutes old");
+                    Log.d(TAG, "New observation is " + getAgeMinutes() + " minutes old");
                 }
 
                 if (weatherObservation.has("stationName")) {
@@ -359,7 +363,8 @@ public class Weather {
     @Override
     public String toString() {
         return String.format("%dC, %.1fkts at %s on %s",
-            centigrades, windKnots, stationName, observationTime);
+            centigrades, windKnots, stationName,
+            FORMATTER.format(observationTime.getTime()));
     }
 
     /**

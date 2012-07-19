@@ -18,6 +18,8 @@
 
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -30,9 +32,9 @@ import java.util.Locale;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Handler.Callback;
-import android.os.Bundle;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
@@ -42,11 +44,6 @@ import android.util.Log;
  * Internet.
  */
 public class TemperatureFetcher extends Thread implements Callback {
-    /**
-     * Used for tagging log messages.
-     */
-    private final static String TAG = ThermometerWidget.TAG;
-
     /**
      * When did we last fetch the weather successfully?
      */

@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -38,11 +39,6 @@ public class UpdateListener
 extends PhoneStateListener
 implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
 {
-    /**
-     * Used for tagging log messages.
-     */
-    private final static String TAG = ThermometerWidget.TAG;
-
     /**
      * Widget controller.
      */

@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -39,11 +40,6 @@ import android.util.Log;
 public class ColorPreferenceHandler
 implements Preference.OnPreferenceClickListener
 {
-    /**
-     * Used for tagging log messages.
-     */
-    private final static String TAG = ThermometerWidget.TAG;
-
     /**
      * This activity will receive the new color in
      * {@link Activity#onActivityResult(int, int, Intent)}.
