@@ -32,6 +32,9 @@ import java.util.Locale;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Handler.Callback;
@@ -115,6 +118,12 @@ public class TemperatureFetcher extends Thread implements Callback {
         String jsonString = null;
         int attempt = 0;
         while (true) {
+            if (!hasDataConnectivity()) {
+                widgetManager.setStatus("No data connection");
+                Log.e(TAG, "No data connection, not retrying");
+                return null;
+            }
+
             attempt++;
             boolean mightRetry = (attempt <= 10);
 
@@ -170,6 +179,24 @@ public class TemperatureFetcher extends Thread implements Callback {
         }
     }
 
+    private boolean hasDataConnectivity() {
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager)widgetManager.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo == null) {
+            Log.d(TAG, "TemperatureFetcher: No active data network");
+            return false;
+        }
+
+        if (!networkInfo.isConnected()) {
+            Log.d(TAG, "TemperatureFetcher: Active network not connected");
+            return false;
+        }
+
+        return true;
+    }
+
     /**
      * Download an URL into a String.
      *
@@ -181,6 +208,7 @@ public class TemperatureFetcher extends Thread implements Callback {
      */
     private String fetchUrl(URL url) throws IOException {
         Log.d(TAG, "Fetching data from: " + url);
+        widgetManager.setStatus("Downloading weather data...");
 
         StringBuilder jsonBuilder = new StringBuilder();
 

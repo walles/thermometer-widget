@@ -23,8 +23,8 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.wifi.WifiManager;
 import android.util.Log;
 
 /**
@@ -52,24 +52,43 @@ public class ThermometerWidget extends AppWidgetProvider {
         // v1.5 fix that doesn't call onDelete Action
         final String action = intent.getAction();
         if (AppWidgetManager.ACTION_APPWIDGET_DELETED.equals(action)) {
-            Log.d(TAG, "onReceive() got DELETED event");
-            final int appWidgetId = intent.getExtras().getInt(
-                AppWidgetManager.EXTRA_APPWIDGET_ID,
-                AppWidgetManager.INVALID_APPWIDGET_ID);
-            if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                Log.d(TAG, "onReceive() faking call to onDeleted()");
-                this.onDeleted(context, new int[] { appWidgetId });
-            }
-        } else if (WifiManager.NETWORK_STATE_CHANGED_ACTION.equals(action)) {
-            NetworkInfo networkInfo =
-                (NetworkInfo)intent.getParcelableExtra(WifiManager.EXTRA_NETWORK_INFO);
-            if (NetworkInfo.State.CONNECTED.equals(networkInfo.getState())) {
-                Log.d(TAG, "Wifi just came online, triggering update");
-                WidgetManager.onUpdate(context, UpdateReason.NETWORK_AVAILABLE);
-            }
+            handleWidgetDelete(context, intent);
+        } else if (ConnectivityManager.CONNECTIVITY_ACTION.equals(action)) {
+            handleConnectivityChange(context);
         } else {
             super.onReceive(context, intent);
         }
+    }
+
+    private void handleWidgetDelete(Context context, Intent intent) {
+        Log.d(TAG, "onReceive() got DELETED event");
+        final int appWidgetId = intent.getExtras().getInt(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID);
+        if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+            Log.d(TAG, "onReceive() faking call to onDeleted()");
+            this.onDeleted(context, new int[] { appWidgetId });
+        }
+    }
+
+    private void handleConnectivityChange(Context context) {
+        Log.d(TAG, "Network connectivity changed...");
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+        if (networkInfo == null) {
+            Log.d(TAG, "No active data network");
+            return;
+        }
+
+        if (!networkInfo.isConnected()) {
+            Log.d(TAG, "Active network not connected");
+            return;
+        }
+
+        Log.d(TAG, "Network available, triggering update: " + networkInfo.getTypeName());
+        WidgetManager.onUpdate(context, UpdateReason.NETWORK_AVAILABLE);
     }
 
     @Override

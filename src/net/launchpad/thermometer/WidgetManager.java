@@ -94,13 +94,6 @@ public class WidgetManager extends Service {
     private TemperatureFetcher temperatureFetcher;
 
     /**
-     * When was the last time we were informed that some network came on-line?
-     *
-     * @see System#currentTimeMillis()
-     */
-    private long lastNetworkAvailableMs = 0;
-
-    /**
      * Create a new widget manager.
      */
     public WidgetManager() {
@@ -312,23 +305,6 @@ public class WidgetManager extends Service {
             setStatus("Locating phone...");
             setWeather(null);
             return;
-        }
-
-        if (why == UpdateReason.NETWORK_AVAILABLE) {
-            synchronized (weatherLock) {
-                long lastUpdateMsAgo =
-                    System.currentTimeMillis() - lastNetworkAvailableMs;
-                long lastUpdateMinutesAgo = lastUpdateMsAgo / (60 * 1000);
-
-                if (lastUpdateMinutesAgo < 30) {
-                    Log.d(TAG,
-                        "Last network-available update "
-                            + lastUpdateMinutesAgo
-                            + " minutes ago, want at least 30, skipping");
-                    return;
-                }
-                lastNetworkAvailableMs = System.currentTimeMillis();
-            }
         }
 
         if (why != UpdateReason.LOCATION_CHANGED) {
