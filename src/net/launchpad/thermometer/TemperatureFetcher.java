@@ -48,9 +48,9 @@ import android.util.Log;
  */
 public class TemperatureFetcher extends Thread implements Callback {
     /**
-     * When did we last fetch the weather successfully?
+     * When should we at the earliest make the next attempt at fetching the weather?
      */
-    private long lastSuccessfulFetch = 0;
+    private long nextFetch = 0;
 
     /**
      * Widget controller.
@@ -85,13 +85,13 @@ public class TemperatureFetcher extends Thread implements Callback {
      * @return Information from the nearest weather station, or null.
      */
     Weather fetchWeather(double latitude, double longitude) {
-        long minutesSinceLastSuccess;
+        long minutesToNextFetch;
         synchronized (this) {
-            minutesSinceLastSuccess =
-                (System.currentTimeMillis() - lastSuccessfulFetch) / (60 * 1000);
+            minutesToNextFetch =
+                (nextFetch - System.currentTimeMillis()) / (60 * 1000);
         }
-        if (minutesSinceLastSuccess < 17) {
-            Log.d(TAG, "Last successful fetch was " + minutesSinceLastSuccess + " minutes ago, skipping");
+        if (minutesToNextFetch > 0) {
+            Log.d(TAG, "Last successful fetch valid for " + minutesToNextFetch + " more minutes, skipping");
             return null;
         }
 
@@ -137,8 +137,16 @@ public class TemperatureFetcher extends Thread implements Callback {
                         weather.getStationName()));
 
                 if (weather != null) {
+                    // If weather is 40 minutes old, wait at least 20 minutes until next fetch
+                    int fetchValidMinutes = weather.getAgeMinutes() / 2;
+                    if (fetchValidMinutes < 30) {
+                        fetchValidMinutes = 30;
+                    }
+                    if (fetchValidMinutes > 60) {
+                        fetchValidMinutes = 60;
+                    }
                     synchronized (this) {
-                        lastSuccessfulFetch = System.currentTimeMillis();
+                        nextFetch = System.currentTimeMillis() + fetchValidMinutes * 60 * 1000;
                     }
                 }
 
