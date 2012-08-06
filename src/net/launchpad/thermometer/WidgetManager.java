@@ -120,41 +120,23 @@ public class WidgetManager extends Service {
      * @param weather What the weather is like.
      */
     public void setWeather(Weather weather) {
-        if (weather != null) {
-            if (weather.getObservationTime() == null) {
-                Log.e(TAG, "New weather observation has no time stamp, dropping it");
-                return;
-            }
+        if (weather == null) {
+            return;
+        }
 
-            if (weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
-                Log.w(TAG, "Ignoring observation from " + weather.getAgeMinutes() + " minutes ago");
-                weather = null;
-            }
+        if (weather.getObservationTime() == null) {
+            Log.e(TAG, "New weather observation has no time stamp, dropping it");
+            return;
         }
 
         synchronized (weatherLock) {
-            if (weather != null) {
-                // Non-null weather update, take it!
-                this.weather = weather;
-                updateUi();
-            } else if (this.weather == null) {
-                // This block intentionally left blank; weather is already null
-            } else {
-                // Null weather update, only take it if our most recent
-                // observation is getting too aged.
-
-                if (this.weather.getObservationTime() == null) {
-                    Log.e(TAG, "Last weather observation has no time stamp, keeping it and hoping for the best");
-                    return;
-                }
-
-                if (this.weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
-                    // Last observation is too old.  Give up and null out our
-                    // weather observation.
-                    this.weather = null;
-                    updateUi();
-                }
+            if (this.weather != null && this.weather.getAgeMinutes() <= weather.getAgeMinutes()) {
+                Log.e(TAG, "New weather older than current weather, dropping it");
+                return;
             }
+
+            this.weather = weather;
+            updateUi();
         }
     }
 
@@ -363,6 +345,10 @@ public class WidgetManager extends Service {
                     toHoursString(weatherObservation.getObservationTime()).toString();
                 if (weatherObservation.getStationName() != null) {
                     metadata += " " + weatherObservation.getStationName();
+                }
+                if (weatherObservation.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
+                    // Present excuses for our old data
+                    metadata = getStatus();
                 }
             } else {
                 metadata = "";
