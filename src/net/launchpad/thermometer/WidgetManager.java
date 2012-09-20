@@ -32,10 +32,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.Signature;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -204,12 +206,35 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Find out if we're running on emulated hardware.
-     *
-     * @return true if we're running on the emulator, false otherwise
+     * This is the hash of the debug signature.  Look at the log messages if it needs updating.
      */
-    private boolean isRunningOnEmulator() {
-        return "unknown".equals(Build.BOARD);
+    private final static int DEBUG_SIGNATURE_HASH = 243186942;
+
+    /**
+     * Find out if we're signed with a debug certificate.
+     *
+     * @return true if we're signed with a debug certificate, false otherwise
+     */
+    private boolean isSignedWithDebugCertificate() {
+        final String packageName = getPackageName();
+        try {
+            Signature [] sigs =
+                    getPackageManager().getPackageInfo(
+                            packageName, PackageManager.GET_SIGNATURES).signatures;
+            for (Signature sig : sigs) {
+                Log.v(TAG, "Package signature hash: " + sig.hashCode());
+                if (DEBUG_SIGNATURE_HASH == sig.hashCode()) {
+                    Log.d(TAG, "This is a debug build!");
+                    return true;
+                }
+            }
+        } catch (NameNotFoundException e) {
+            // Err on the side of caution
+            Log.w(TAG, "Error finding debug build for package name: " + packageName, e);
+            return false;
+        }
+
+        return false;
     }
 
     /**
@@ -224,7 +249,7 @@ public class WidgetManager extends Service {
         Location lastKnownLocation =
             locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
-        if (lastKnownLocation == null && isRunningOnEmulator()) {
+        if (lastKnownLocation == null && isSignedWithDebugCertificate()) {
             Log.i(TAG,
                 "Location unknown but running on emulator, hard coding coordinates to Johan's place");
             lastKnownLocation = new Location("Johan");
@@ -396,7 +421,7 @@ public class WidgetManager extends Service {
             preferences.getInt("textColorPref", Color.WHITE));
 
         Intent intent;
-        if (isPositioningEnabled() || isRunningOnEmulator()) {
+        if (isPositioningEnabled() || isSignedWithDebugCertificate()) {
             // Tell widget to launch the preferences activity on click
             intent = new Intent(this, ThermometerConfigure.class);
         } else {
