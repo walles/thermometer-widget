@@ -70,7 +70,7 @@ public class WidgetManager extends Service {
      * You need to synchronize on this before accessing any of the other
      * fields of this class.
      */
-    private Object weatherLock = new Object();
+    private final Object weatherLock = new Object();
 
     /**
      * The latest weather measurement.
