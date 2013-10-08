@@ -96,16 +96,21 @@ public class TemperatureFetcher extends Thread implements Callback {
         }
 
         // Create something like:
-        // http://ws.geonames.org/findNearByWeatherJSON?lat=43&lng=-2
+        // http://api.openweathermap.org/data/2.5/weather?lat=43&lon=-2&APPID=something
         // More info here:
-        // http://www.geonames.org/export/JSON-webservices.html#findNearByWeatherJSON
+        // http://api.openweathermap.org/API#weather
 
         URL url;
         String urlString = null;
         try {
+            // Constants is by design not in the source code repo.
+            //
+            // Create your own by just making a class containing a single string constant with your APPID String in it.
+            // The APPID string can be empty, or you can get your own at http://openweathermap.org/appid.
             urlString =
-                String.format(Locale.ENGLISH, "http://ws.geonames.org/findNearByWeatherJSON?lat=%.4f&lng=%.4f",
-                    latitude, longitude);
+                String.format(Locale.ENGLISH,
+                        "http://api.openweathermap.org/data/2.5/weather?lat=%.4f&lon=%.4f&APPID=%s",
+                        latitude, longitude, Constants.APPID);
 
             url = new URL(urlString);
             Log.v(TAG, "JSON URL created: " + url);
@@ -132,7 +137,7 @@ public class TemperatureFetcher extends Thread implements Callback {
 
                 Weather weather = new Weather(new JSONObject(jsonString));
 
-                widgetManager.setStatus(String.format("Got %s weather from %s",
+                widgetManager.setStatus(String.format("%s weather from %s",
                         minutesToTimeOldString(weather.getAgeMinutes()),
                         weather.getStationName()));
 

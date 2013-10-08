@@ -35,7 +35,7 @@ public class Weather {
     /**
      * The temperature in Celsius.
      */
-    private final int centigrades;
+    private final double centigrades;
 
     /**
      * The wind speed in knots.
@@ -50,7 +50,7 @@ public class Weather {
     /**
      * When this weather was observed.
      */
-    private Calendar observationTime;
+    private final Calendar observationTime;
 
     /**
      * When was this weather observed?
@@ -201,81 +201,65 @@ public class Weather {
         }
 
         try {
-            if (weatherObservation.has("weatherObservation")) {
-                weatherObservation =
-                    weatherObservation.getJSONObject("weatherObservation");
-
-                Log.d(TAG, "New weather observation received:\n" + weatherObservation);
-
-                if (weatherObservation.has("datetime")) {
-                    observationTime = toLocal(parseDateTime(weatherObservation.getString("datetime")));
-                    Log.d(TAG, "New observation is " + getAgeMinutes() + " minutes old");
-                }
-
-                if (weatherObservation.has("stationName")) {
-                    String extractedStationName = weatherObservation.getString("stationName");
-                    stationName = prettifyStationName(extractedStationName);
+            if (weatherObservation.has("message")) {
+                String message = weatherObservation.getString("message");
+                if ("Error: Not found city".equals(message)) {
+                    message = "No weather stations nearby";
                 } else {
-                    stationName = null;
+                    message = message.replace("Error: ", "Weather service error: ");
                 }
-
-                String fromStation = "";
-                if (stationName != null) {
-                    fromStation = " from " + stationName;
-                }
-
-                if (!weatherObservation.has("temperature")) {
-                    throw new IllegalArgumentException("No temperature received"
-                        + fromStation);
-                }
-
-                try {
-                    centigrades = weatherObservation.getInt("temperature");
-                } catch (JSONException e) {
-                    throw new IllegalArgumentException("Borken temperature received"
-                        + fromStation, e);
-                }
-
-                if (weatherObservation.has("windSpeed")) {
-                    windKnots = weatherObservation.getDouble("windSpeed");
-                } else {
-                    // No wind observation received, let's pretend it's calm
-                    windKnots = 0;
-                }
-
-                return;
+                throw new IllegalArgumentException(message);
             }
 
-            // Assume an error message:
-            // {"status":{"message":"error parsing parameters for lat/lng","value":14}}
-            weatherObservation =
-                weatherObservation.getJSONObject("status");
-            int statusCode = weatherObservation.getInt("value");
+            Log.d(TAG, "New weather observation received:\n" + weatherObservation);
 
-            String statusMessage = weatherObservation.getString("message");
-            Log.w(TAG, "Web service trouble: ["
-                + statusCode
-                + "] "
-                + statusMessage);
+            if (weatherObservation.has("dt")) {
+                Calendar utc = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+                utc.setTimeInMillis(weatherObservation.getLong("dt") * 1000);
+                observationTime = toLocal(utc);
+                Log.d(TAG, "New observation is " + getAgeMinutes() + " minutes old");
+            } else {
+                observationTime = null;
+            }
 
-            switch (statusCode) {
-            case 22:
-                // "The free servers are busy, go away"
-                throw new IllegalArgumentException("Weather server busy");
+            if (weatherObservation.has("name")) {
+                String extractedStationName = weatherObservation.getString("name");
+                stationName = prettifyStationName(extractedStationName);
+            } else {
+                stationName = null;
+            }
 
-            case 12:
-                // Probably database trouble at the server side:
-                // "Connection refused. Check that the hostname and port are
-                // correct and that the postmaster is accepting TCP/IP
-                // connections."
-                throw new IllegalArgumentException("Weather server temporarily unavailable [12]");
+            String fromStation = "";
+            if (stationName != null) {
+                fromStation = " from " + stationName;
+            }
 
-            case 15:
-                // "No observation found"
-                throw new IllegalArgumentException("No weather stations nearby");
+            if (!weatherObservation.has("main")) {
+                throw new IllegalArgumentException("No temperature (1)" + fromStation);
+            }
+            JSONObject observationMain = weatherObservation.getJSONObject("main");
 
-            default:
-                throw new IllegalArgumentException(statusMessage);
+            if (!observationMain.has("temp")) {
+                throw new IllegalArgumentException("No temperature (2)" + fromStation);
+            }
+            try {
+                double kelvin = observationMain.getDouble("temp");
+                centigrades = kelvin - 273.15;
+            } catch (JSONException e) {
+                throw new IllegalArgumentException(String.format("Borken temperature <%s>%s",
+                        observationMain.getString("temp"),
+                        fromStation));
+            }
+
+            if (!weatherObservation.has("wind")) {
+                Log.d(TAG, "Got no wind info" + fromStation);
+
+                // Pretend it's calm
+                windKnots = 0.0;
+            } else {
+                JSONObject windObservation = weatherObservation.getJSONObject("wind");
+                double windSpeedMps = windObservation.getDouble("speed");
+                windKnots = windSpeedMps * 1.942615;
             }
         } catch (JSONException e) {
             Log.e(TAG, "Parsing weather data failed:\n" + weatherObservation, e);
@@ -325,7 +309,7 @@ public class Weather {
      */
     public int getCentigrades(boolean correctForWindChill) {
         if (!correctForWindChill) {
-            return centigrades;
+            return (int)Math.round(centigrades);
         }
 
         return (int)Math.round(getWindChilledCentigrades());
@@ -362,9 +346,14 @@ public class Weather {
 
     @Override
     public String toString() {
-        return String.format("%dC, %.1fkts at %s on %s",
-            centigrades, windKnots, stationName,
-            FORMATTER.format(observationTime.getTime()));
+        String timeString;
+        if (observationTime != null) {
+            timeString = FORMATTER.format(observationTime.getTime());
+        } else {
+            timeString = "<null>";
+        }
+        return String.format("%.1fC, %.1fkts at %s on %s",
+            centigrades, windKnots, stationName, timeString);
     }
 
     /**
@@ -381,5 +370,14 @@ public class Weather {
             System.currentTimeMillis() - observationTime.getTimeInMillis();
 
         return (int)(ageMs / (60 * 1000));
+    }
+
+    /**
+     * This method has default protection for testing purposes
+     *
+     * @return The wind speed in knots
+     */
+    double getWindKnots() {
+        return windKnots;
     }
 }
