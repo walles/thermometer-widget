@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="net.launchpad.thermometer"
-      android:versionCode="18" android:versionName="1.17">
+      android:versionCode="19" android:versionName="1.18">
 
     <uses-sdk android:minSdkVersion="3" android:targetSdkVersion="7"/>
 
@@ -18,7 +18,7 @@
         <intent-filter>
             <action android:name="android.net.wifi.STATE_CHANGE"></action>
         </intent-filter>
-    
+
 </receiver>
 
                 <receiver android:name=".ThermometerWidget">
@@ -26,7 +26,7 @@
                     <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
                 </intent-filter>
             </receiver>
-    
+
 <activity android:name="ThermometerConfigure" android:exported="false">
     <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
@@ -34,4 +34,4 @@
 </activity>
 <service android:name="WidgetManager"></service>
 </application>
-</manifest> 
+</manifest>
