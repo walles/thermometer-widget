@@ -19,6 +19,8 @@
 package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
+import android.R;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -196,7 +198,7 @@ implements Preference.OnPreferenceClickListener
                 dialog.cancel();
             }
         });
-        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setIcon(R.drawable.ic_dialog_alert);
         builder.show();
     }
 

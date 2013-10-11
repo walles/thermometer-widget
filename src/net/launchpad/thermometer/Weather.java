@@ -23,13 +23,13 @@ public class Weather {
     /**
      * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
      */
-    private final static Pattern DATE_PARSE =
+    private static final Pattern DATE_PARSE =
         Pattern.compile("([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)");
 
     /**
      * Used by {@link #toString()}.
      */
-    private final static SimpleDateFormat FORMATTER =
+    private static final SimpleDateFormat FORMATTER =
             new SimpleDateFormat("yyyy MMM dd hh:mm zz");
 
     /**
@@ -59,35 +59,6 @@ public class Weather {
      */
     public Calendar getObservationTime() {
         return observationTime;
-    }
-
-    /**
-     * Convert a string to an UTC Calendar object.
-     *
-     * @param timeString An UTC time stamp in the following format: "2010-07-29 10:20:00"
-     *
-     * @return A calendar object representing the same time as the timeString,
-     * or null if the time string couldn't be parsed.
-     */
-    static Calendar parseDateTime(String timeString) {
-        Matcher match = DATE_PARSE.matcher(timeString);
-        if (!match.matches()) {
-            Log.w(TAG, "Can't parse time string: " + timeString);
-            return null;
-        }
-
-        int year = Integer.valueOf(match.group(1));
-        int month = Integer.valueOf(match.group(2)) - 1;
-        int day = Integer.valueOf(match.group(3));
-
-        int hour = Integer.valueOf(match.group(4));
-        int minute = Integer.valueOf(match.group(5));
-        int second = Integer.valueOf(match.group(6));
-
-        Calendar utcCalendar = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
-        utcCalendar.set(year, month, day, hour, minute, second);
-
-        return utcCalendar;
     }
 
     /**

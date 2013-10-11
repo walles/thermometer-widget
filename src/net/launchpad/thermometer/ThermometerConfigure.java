@@ -38,7 +38,7 @@ public class ThermometerConfigure extends PreferenceActivity {
     /**
      * Request code for text color.
      */
-    private final static int REQUEST_TEXT_COLOR = 1;
+    private static final int REQUEST_TEXT_COLOR = 1;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -57,7 +57,7 @@ public class ThermometerConfigure extends PreferenceActivity {
         temperatureUnits.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
             public boolean onPreferenceChange(Preference preference, Object value) {
-                ((ListPreference)preference).setSummary(value.toString());
+                preference.setSummary(value.toString());
 
                 // true == accept the new value
                 return true;

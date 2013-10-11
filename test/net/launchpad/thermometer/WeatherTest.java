@@ -62,27 +62,6 @@ public class WeatherTest {
     }
 
     /**
-     * Validate {@link Weather#getObservationTime()}.
-     *
-     * @throws Exception if testing goes exceptionally wrong
-     */
-    @Test
-    public void testParseDateTime() throws Exception {
-        mockStatic(Log.class);
-
-        Calendar verifyMe =
-            Weather.parseDateTime("2010-07-19 15:03:04");
-
-        Calendar expected = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
-        expected.set(2010, Calendar.JULY, 19, 15, 3, 4);
-
-        final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy MMM dd hh:mm zz");
-        assertEquals(
-            FORMATTER.format(expected.getTime()),
-            FORMATTER.format(verifyMe.getTime()));
-    }
-
-    /**
      * Validate {@link Weather#getCentigrades(boolean)}.
      *
      * @throws Exception when testing goes exceptionally bad

@@ -328,7 +328,7 @@ public class TemperatureFetcher extends Thread implements Callback {
                 Log.d(TAG, "Waiting 1s for message handler to become available");
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                throw new RuntimeException("Interrupted waiting for message handler to become available");
+                throw new RuntimeException("Interrupted waiting for message handler to become available", e);
             }
         }
     }
