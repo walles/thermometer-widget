@@ -6,8 +6,6 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,12 +18,6 @@ import android.util.Log;
  * @author johan.walles@gmail.com
  */
 public class Weather {
-    /**
-     * Parser for timestamp strings in the following format: "2010-07-29 10:20:00"
-     */
-    private static final Pattern DATE_PARSE =
-        Pattern.compile("([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+).([0-9]+)");
-
     /**
      * Used by {@link #toString()}.
      */
@@ -81,7 +73,7 @@ public class Weather {
      *
      * @return A capitalized version of capitalizeMe.
      */
-    private String capitalize(String capitalizeMe) {
+    private static String capitalize(CharSequence capitalizeMe) {
         StringBuilder builder = new StringBuilder(capitalizeMe.length());
         boolean shouldCapitalize = true;
         for (int i = 0; i < capitalizeMe.length(); i++) {
@@ -111,7 +103,7 @@ public class Weather {
      *
      * @return A pretty station name.
      */
-    private String prettifyStationName(String ugly) {
+    private static String prettifyStationName(String ugly) {
         if (ugly == null) {
             return null;
         }
@@ -166,6 +158,7 @@ public class Weather {
      *
      * @throws IllegalArgumentException with an explanatory message on trouble
      */
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     public Weather(JSONObject weatherObservation) {
         if (weatherObservation == null) {
             throw new NullPointerException("Want a non-null JSON object to parse");
@@ -219,18 +212,18 @@ public class Weather {
             } catch (JSONException e) {
                 throw new IllegalArgumentException(String.format("Borken temperature <%s>%s",
                         observationMain.getString("temp"),
-                        fromStation));
+                        fromStation), e);
             }
 
-            if (!weatherObservation.has("wind")) {
+            if (weatherObservation.has("wind")) {
+                JSONObject windObservation = weatherObservation.getJSONObject("wind");
+                double windSpeedMps = windObservation.getDouble("speed");
+                windKnots = windSpeedMps * 1.942615;
+            } else {
                 Log.d(TAG, "Got no wind info" + fromStation);
 
                 // Pretend it's calm
                 windKnots = 0.0;
-            } else {
-                JSONObject windObservation = weatherObservation.getJSONObject("wind");
-                double windSpeedMps = windObservation.getDouble("speed");
-                windKnots = windSpeedMps * 1.942615;
             }
         } catch (JSONException e) {
             Log.e(TAG, "Parsing weather data failed:\n" + weatherObservation, e);
@@ -245,6 +238,7 @@ public class Weather {
      *
      * @see "http://en.wikipedia.org/wiki/Wind_chill#North_American_wind_chill_index"
      */
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     private double getWindChilledCentigrades() {
         double windKmh = 1.85 * windKnots;
 
