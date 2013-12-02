@@ -53,14 +53,20 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         }
         this.widgetManager = widgetManager;
 
-        Log.d(TAG, "Registering location listener");
+        Log.d(TAG, "Registering location listener...");
         LocationManager locationManager = getLocationManager();
-        widgetManager.setStatus("Locating phone...");
-        locationManager.requestLocationUpdates(
-            LocationManager.NETWORK_PROVIDER,
-            41 * 60 * 1000, // Drift a bit relative to the periodic widget update
-            50000, // Every 50km we move
-            this);
+
+        if (locationManager.getAllProviders().contains(LocationManager.NETWORK_PROVIDER)) {
+            widgetManager.setStatus("Locating phone...");
+            locationManager.requestLocationUpdates(
+                    LocationManager.NETWORK_PROVIDER,
+                    41 * 60 * 1000, // Drift a bit relative to the periodic widget update
+                    50000, // Every 50km we move
+                    this);
+        } else {
+            widgetManager.setStatus("Network position not available on device");
+            Log.e(TAG, "Network positioning not available on this device");
+        }
 
         Log.d(TAG, "Registering preferences change notification listener");
         SharedPreferences preferences =
