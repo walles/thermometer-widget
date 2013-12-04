@@ -326,7 +326,7 @@ public class Weather {
      *
      * @return The age of this observation in minutes.
      */
-    public int getAgeMinutes() {
+    public final int getAgeMinutes() {
         if (observationTime == null) {
             return Integer.MAX_VALUE;
         }
