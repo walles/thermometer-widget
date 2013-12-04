@@ -68,6 +68,17 @@ public class ThermometerConfigure extends PreferenceActivity {
         ColorPreferenceHandler.handle(
             findPreference("textColorPref"), REQUEST_TEXT_COLOR, this, Color.WHITE);
 
+        // Set up the View Logs button to allow the user to view the Thermometer Widget logs
+        findPreference("viewLogs").setOnPreferenceClickListener(
+                new Preference.OnPreferenceClickListener() {
+                    @Override
+                    public boolean onPreferenceClick(Preference preference) {
+                        startActivity(new Intent(ThermometerConfigure.this, ThermometerLogViewer.class));
+
+                        return true; // True = click handled
+                    }
+                });
+
         // Register "success" as a result for once the user is done
         setResult(RESULT_OK);
     }

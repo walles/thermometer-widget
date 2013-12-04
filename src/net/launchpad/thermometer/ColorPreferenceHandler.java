@@ -34,7 +34,7 @@ import android.preference.Preference;
 import android.util.Log;
 
 /**
- * This class can handle act as a preference OnClick listener.  It enables the
+ * This class acts as a preference OnClick listener.  It enables the
  * user to select a color.
  *
  * @author johan.walles@gmail.com
