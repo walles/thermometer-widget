@@ -38,6 +38,7 @@ import android.content.pm.Signature;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -211,30 +212,14 @@ public class WidgetManager extends Service {
     private final static int DEBUG_SIGNATURE_HASH = 243186942;
 
     /**
-     * Find out if we're signed with a debug certificate.
+     * Find out if we're running on an emulator.
      *
-     * @return true if we're signed with a debug certificate, false otherwise
+     * @return true if we're running on an emulator, false otherwise
      */
-    private boolean isSignedWithDebugCertificate() {
-        final String packageName = getPackageName();
-        try {
-            Signature [] sigs =
-                    getPackageManager().getPackageInfo(
-                            packageName, PackageManager.GET_SIGNATURES).signatures;
-            for (Signature sig : sigs) {
-                Log.v(TAG, "Package signature hash: " + sig.hashCode());
-                if (DEBUG_SIGNATURE_HASH == sig.hashCode()) {
-                    Log.d(TAG, "This is a debug build!");
-                    return true;
-                }
-            }
-        } catch (NameNotFoundException e) {
-            // Err on the side of caution
-            Log.w(TAG, "Error finding debug build for package name: " + packageName, e);
-            return false;
-        }
-
-        return false;
+    private boolean isRunningOnEmulator() {
+        // Inspired by
+        // http://stackoverflow.com/questions/2799097/how-can-i-detect-when-an-android-application-is-running-in-the-emulator
+        return "sdk".equals(Build.PRODUCT);
     }
 
     /**
@@ -249,7 +234,7 @@ public class WidgetManager extends Service {
         Location lastKnownLocation =
             locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
-        if (lastKnownLocation == null && isSignedWithDebugCertificate()) {
+        if (lastKnownLocation == null && isRunningOnEmulator()) {
             Log.i(TAG,
                 "Location unknown but running on emulator, hard coding coordinates to Johan's place");
             lastKnownLocation = new Location("Johan");
@@ -433,7 +418,7 @@ public class WidgetManager extends Service {
             preferences.getInt("textColorPref", Color.WHITE));
 
         Intent intent;
-        if (isPositioningEnabled() || isSignedWithDebugCertificate()) {
+        if (isPositioningEnabled() || isRunningOnEmulator()) {
             // Tell widget to launch the preferences activity on click
             intent = new Intent(this, ThermometerConfigure.class);
         } else {
