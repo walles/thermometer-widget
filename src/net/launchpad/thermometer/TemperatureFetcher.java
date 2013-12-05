@@ -73,6 +73,15 @@ public class TemperatureFetcher extends Thread implements Callback {
         this.widgetManager = widgetManager;
     }
 
+    static String censorAppid(String urlWithAppid) {
+        int appIdIndex = urlWithAppid.indexOf("APPID=");
+        if (appIdIndex < 0) {
+            return urlWithAppid;
+        }
+
+        return urlWithAppid.substring(0, appIdIndex) + "APPID=XXXXXX";
+    }
+
     /**
      * Fetch the weather for a given location.
      * <p>
@@ -113,7 +122,7 @@ public class TemperatureFetcher extends Thread implements Callback {
                         latitude, longitude, Constants.APPID);
 
             url = new URL(urlString);
-            Log.v(TAG, "JSON URL created: " + url);
+            Log.v(TAG, "JSON URL created: " + censorAppid(url.toString()));
         } catch (MalformedURLException e) {
             Log.e(TAG, "Internal error creating JSON URL from: " + urlString, e);
             widgetManager.setStatus("Internal error JSON URL");
@@ -261,7 +270,7 @@ public class TemperatureFetcher extends Thread implements Callback {
      * @throws IOException if downloading data from the URL fails.
      */
     private String fetchUrl(URL url) throws IOException {
-        Log.d(TAG, "Fetching data from: " + url);
+        Log.d(TAG, "Fetching data from: " + censorAppid(url.toString()));
         widgetManager.setStatus("Downloading weather data...");
 
         StringBuilder jsonBuilder = new StringBuilder();

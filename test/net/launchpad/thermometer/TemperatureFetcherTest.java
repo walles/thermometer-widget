@@ -28,4 +28,11 @@ public class TemperatureFetcherTest {
 
         assertEquals("2 years old", TemperatureFetcher.minutesToTimeOldString((int)(60 * 24 * 365.25 * 2)));
     }
+
+    @Test
+    public void testCensorAppid() {
+        assertEquals("whateverAPPID=XXXXXX",
+                TemperatureFetcher.censorAppid("whateverAPPID=139qe9ghguoh82824908429r2"));
+        assertEquals("whatever", TemperatureFetcher.censorAppid("whatever"));
+    }
 }
