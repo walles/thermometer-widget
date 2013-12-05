@@ -255,7 +255,19 @@ public class WidgetManager extends Service {
             lastKnownLocation = new Location("Johan");
             lastKnownLocation.setLatitude(59.3190);
             lastKnownLocation.setLongitude(18.0518);
+            lastKnownLocation.setTime(System.currentTimeMillis());
         }
+
+        if (lastKnownLocation == null) {
+            Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
+        } else {
+            long ageMs = System.currentTimeMillis() - lastKnownLocation.getTime();
+            int ageMinutes = (int)(ageMs / (60 * 1000));
+            Log.d(TAG, String.format("Got a %s location from %s",
+                    Util.minutesToTimeOldString(ageMinutes),
+                    lastKnownLocation.getProvider()));
+        }
+
         return lastKnownLocation;
     }
 
