@@ -23,6 +23,7 @@ import android.util.Log;
  *
  * @author johan.walles@gmail.com
  */
+@SuppressWarnings("ResultOfObjectAllocationIgnored")
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(Log.class)
 public class WeatherTest {
@@ -57,7 +58,7 @@ public class WeatherTest {
             new Weather(parseMe);
             fail("IllegalArgumentException Expected");
         } catch (IllegalArgumentException e) {
-            assertEquals("Weather service error: Not found city", e.getMessage());
+            assertEquals("No weather stations nearby", e.getMessage());
         }
     }
 
