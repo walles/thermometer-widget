@@ -26,5 +26,5 @@
     <Preference
       android:title="View Logs"
       android:key="viewLogs"
-      android:summary="Advanced troubleshooting"/>
+      android:summary="Problem reporting and troubleshooting"/>
 </PreferenceScreen>
