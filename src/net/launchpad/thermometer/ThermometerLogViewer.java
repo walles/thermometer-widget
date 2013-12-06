@@ -19,6 +19,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.Writer;
 
 /**
@@ -55,7 +57,7 @@ public class ThermometerLogViewer extends Activity {
         });
     }
 
-    private void emailDeveloper() {
+    private Uri getEmailLogAttachmentUri() {
         final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
 
         // Dump log view contents into a file
@@ -65,14 +67,14 @@ public class ThermometerLogViewer extends Activity {
                     openFileOutput(LOG_DUMP_FILENAME, MODE_WORLD_READABLE));
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Unable to open log dump file for writing", e);
-            return;
+            return null;
         }
         try {
             TextView logView = (TextView)findViewById(R.id.logView);
             out.write(logView.getText().toString());
         } catch (IOException e) {
             Log.e(TAG, "Writing log dump failed", e);
-            return;
+            return null;
         } finally {
             try {
                 out.close();
@@ -81,15 +83,11 @@ public class ThermometerLogViewer extends Activity {
             }
         }
 
-        // Compose an e-mail with the log file attached
-        Intent intent = new Intent(Intent.ACTION_SEND);
+        File file = new File(getFilesDir(), LOG_DUMP_FILENAME);
+        return Uri.fromFile(file);
+    }
 
-        intent.setType("message/rfc822");
-
-        // Fill in the recipient
-        intent.putExtra(Intent.EXTRA_EMAIL, new String[] { "johan.walles@gmail.com" });
-
-        // Put the version number to the subject line
+    private String getEmailSubject() {
         String versionName;
         try {
             versionName = getPackageManager()
@@ -98,17 +96,44 @@ public class ThermometerLogViewer extends Activity {
             Log.e(TAG, "Couldn't find my own version number", e);
             versionName = "(unknown version)";
         }
-        intent.putExtra(Intent.EXTRA_SUBJECT, "Thermometer Widget " + versionName);
 
-        intent.putExtra(Intent.EXTRA_TEXT,
-                "Hi!\n"
-                        + "\n"
-                        + "I'm having problems with the Thermometer Widget. Here's a very thorough explanation of what's wrong:\n"
-                        + "\n");
+        return "Thermometer Widget " + versionName;
+    }
+
+    private String getEmailText() {
+        StringWriter text = new StringWriter();
+
+        @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+        PrintWriter textWriter = new PrintWriter(text);
+
+        textWriter.println("Hi!");
+        textWriter.println();
+        textWriter.print("I'm having problems with the Thermometer Widget.");
+        textWriter.println(" Here's a very thorough explanation of what's wrong:");
+        textWriter.println();
+
+        return text.toString();
+    }
+
+    private void emailDeveloper() {
+        // Compose an e-mail with the log file attached
+        Intent intent = new Intent(Intent.ACTION_SEND);
+
+        intent.setType("message/rfc822");
+
+        intent.putExtra(Intent.EXTRA_EMAIL,
+                new String[] { "johan.walles@gmail.com" });
+
+        intent.putExtra(Intent.EXTRA_SUBJECT, getEmailSubject());
+
+        intent.putExtra(Intent.EXTRA_TEXT, getEmailText());
 
         // Attach the newly dumped log file
-        File file = new File(getFilesDir(), LOG_DUMP_FILENAME);
-        Uri uri = Uri.fromFile(file);
+        Uri uri = getEmailLogAttachmentUri();
+        if (uri == null) {
+            Log.e(TAG, "No log file to attach");
+            return;
+        }
         intent.putExtra(Intent.EXTRA_STREAM, uri);
 
         startActivity(Intent.createChooser(intent, "Report Problem"));
