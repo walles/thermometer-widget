@@ -31,6 +31,8 @@ public class ThermometerLogViewer extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        long t0 = System.currentTimeMillis();
+
         setContentView(R.layout.log_viewer);
 
         TextView logView = (TextView)findViewById(R.id.logView);
@@ -55,6 +57,9 @@ public class ThermometerLogViewer extends Activity {
                 emailDeveloper();
             }
         });
+
+        long t1 = System.currentTimeMillis();
+        Log.d(TAG, String.format("Setting up the log viewer took %dms", t1 - t0));
     }
 
     private Uri getEmailLogAttachmentUri() {
