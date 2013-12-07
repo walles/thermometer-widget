@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -22,6 +23,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.lang.reflect.Field;
 
 /**
  * Shows the Thermometer Widget logs.
@@ -105,6 +107,29 @@ public class ThermometerLogViewer extends Activity {
         return "Thermometer Widget " + versionName;
     }
 
+    private String getDeviceDescription() {
+        StringWriter text = new StringWriter();
+
+        @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
+        PrintWriter textWriter = new PrintWriter(text);
+
+        for (Field field : Build.class.getFields()) {
+            if (!String.class.equals(field.getType())) {
+                continue;
+            }
+
+            String value;
+            try {
+                value = (String)field.get(null);
+            } catch (IllegalAccessException ignored) {
+                continue;
+            }
+            textWriter.format("%s: %s\n", field.getName(), value);
+        }
+
+        return text.toString();
+    }
+
     private String getEmailText() {
         StringWriter text = new StringWriter();
 
@@ -113,8 +138,11 @@ public class ThermometerLogViewer extends Activity {
 
         textWriter.println("Hi!");
         textWriter.println();
+        textWriter.println("Here's what I'm running on:");
+        textWriter.print(getDeviceDescription());
+        textWriter.println();
         textWriter.print("I'm having problems with the Thermometer Widget.");
-        textWriter.println(" Here's a very thorough explanation of what's wrong:");
+        textWriter.println(" Here's a very detailed explanation of what's wrong:");
         textWriter.println();
 
         return text.toString();
