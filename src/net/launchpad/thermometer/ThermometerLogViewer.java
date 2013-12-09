@@ -64,9 +64,9 @@ public class ThermometerLogViewer extends Activity {
         Log.d(TAG, String.format("Setting up the log viewer took %dms", t1 - t0));
     }
 
-    private Uri getEmailLogAttachmentUri() {
-        final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
+    private static final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
 
+    private Uri getEmailLogAttachmentUri() {
         // Dump log view contents into a file
         Writer out;
         try {
