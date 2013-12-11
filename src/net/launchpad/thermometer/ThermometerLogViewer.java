@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -35,6 +36,63 @@ import java.lang.reflect.Field;
  */
 public class ThermometerLogViewer extends Fragment {
     private TextView logView;
+    private Button reportProblemButton;
+    private ScrollView verticalScrollView;
+
+    private class ReadLogsTask extends AsyncTask<Void, Void, CharSequence> {
+        @Override
+        protected CharSequence doInBackground(Void... voids) {
+            long t0 = System.currentTimeMillis();
+
+            Process process;
+            try {
+                process = Runtime.getRuntime().exec("logcat -d -v time");
+            } catch (IOException e) {
+                Log.e(TAG, "exec(logcat) failed", e);
+                return "exec(logcat) failed";
+            }
+
+            BufferedReader bufferedReader =
+                    new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder builder = new StringBuilder();
+            try {
+                String line;
+                while ((line = bufferedReader.readLine()) != null) {
+                    builder.append(line);
+                    builder.append("\n");
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Reading log files failed", e);
+                builder.append("Reading log files failed");
+            } finally {
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    Log.w(TAG, "Closing logcat pipe failed", e);
+                }
+            }
+
+            long t1 = System.currentTimeMillis();
+            Log.d(TAG, String.format("Reading the log files took %dms", t1 - t0));
+
+            return builder;
+        }
+
+        @Override
+        protected void onPostExecute(CharSequence text) {
+            logView.setText(text);
+
+            // Scroll log view to bottom
+            verticalScrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    verticalScrollView.smoothScrollTo(0, Integer.MAX_VALUE);
+                }
+            });
+
+            reportProblemButton.setEnabled(true);
+        }
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -46,25 +104,21 @@ public class ThermometerLogViewer extends Fragment {
         logView = (TextView)view.findViewById(R.id.logView);
         logView.setHorizontallyScrolling(true);
         logView.setHorizontalScrollBarEnabled(true);
+        logView.setText("Reading logs, stand by...");
 
-        addLogsToView(logView);
+        verticalScrollView = (ScrollView)view.findViewById(R.id.verticalScrollView);
 
-        // Scroll log view to bottom
-        final ScrollView verticalScrollView = (ScrollView)view.findViewById(R.id.verticalScrollView);
-        verticalScrollView.post(new Runnable() {
-            @Override
-            public void run() {
-                verticalScrollView.smoothScrollTo(0, Integer.MAX_VALUE);
-            }
-        });
-
-        Button reportProblemButton = (Button)view.findViewById(R.id.reportProblemButton);
+        reportProblemButton = (Button)view.findViewById(R.id.reportProblemButton);
+        reportProblemButton.setEnabled(false);  // Disable button until the logs have been loaded
         reportProblemButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 emailDeveloper();
             }
         });
+
+        // Read the logs asynchronously and put them in the UI when done
+        new ReadLogsTask().execute();
 
         long t1 = System.currentTimeMillis();
         Log.d(TAG, String.format("Setting up the log viewer took %dms", t1 - t0));
@@ -194,36 +248,5 @@ public class ThermometerLogViewer extends Fragment {
         intent.putExtra(Intent.EXTRA_STREAM, uri);
 
         startActivity(Intent.createChooser(intent, "Report Problem"));
-    }
-
-    private static void addLogsToView(TextView logView) {
-        // Load the logs into the log_viewer's logView.
-        Process process;
-        try {
-            process = Runtime.getRuntime().exec("logcat -d -v time");
-        } catch (IOException e) {
-            Log.e(TAG, "exec(logcat) failed", e);
-            logView.append("exec(logcat) failed");
-            return;
-        }
-
-        BufferedReader bufferedReader =
-                new BufferedReader(new InputStreamReader(process.getInputStream()));
-        try {
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                logView.append(line);
-                logView.append("\n");
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "Reading log files failed", e);
-            logView.append("Reading log files failed");
-        } finally {
-            try {
-                bufferedReader.close();
-            } catch (IOException e) {
-                Log.w(TAG, "Closing logcat pipe failed", e);
-            }
-        }
     }
 }
