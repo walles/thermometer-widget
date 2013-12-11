@@ -150,18 +150,16 @@ public class TemperatureFetcher extends Thread implements Callback {
                         Util.minutesToTimeOldString(weather.getAgeMinutes()),
                         weather.getStationName()));
 
-                if (weather != null) {
-                    // If weather is 40 minutes old, wait at least 20 minutes until next fetch
-                    int fetchValidMinutes = weather.getAgeMinutes() / 2;
-                    if (fetchValidMinutes < 30) {
-                        fetchValidMinutes = 30;
-                    }
-                    if (fetchValidMinutes > 60) {
-                        fetchValidMinutes = 60;
-                    }
-                    synchronized (this) {
-                        nextFetch = System.currentTimeMillis() + fetchValidMinutes * 60 * 1000;
-                    }
+                // If weather is 40 minutes old, wait at least 20 minutes until next fetch
+                int fetchValidMinutes = weather.getAgeMinutes() / 2;
+                if (fetchValidMinutes < 30) {
+                    fetchValidMinutes = 30;
+                }
+                if (fetchValidMinutes > 60) {
+                    fetchValidMinutes = 60;
+                }
+                synchronized (this) {
+                    nextFetch = System.currentTimeMillis() + fetchValidMinutes * 60 * 1000;
                 }
 
                 return weather;
@@ -256,7 +254,6 @@ public class TemperatureFetcher extends Thread implements Callback {
                 Log.w(TAG,
                     "Unable to close JSON input stream from " + url);
             }
-            in = null;
         }
         return jsonBuilder.toString();
     }
