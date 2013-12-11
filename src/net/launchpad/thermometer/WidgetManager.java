@@ -420,7 +420,7 @@ public class WidgetManager extends Service {
         Intent intent;
         if (isPositioningEnabled() || isRunningOnEmulator()) {
             // Tell widget to launch the preferences activity on click
-            intent = new Intent(this, ThermometerConfigure.class);
+            intent = new Intent(this, ThermometerActions.class);
         } else {
             // Don't know where we are, launch positioning settings on click
             intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);

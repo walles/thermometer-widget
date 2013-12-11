@@ -23,8 +23,4 @@
       android:title="Text Color"
       android:key="textColorPref"
       android:defaultValue="0xffffffff"/>
-    <Preference
-      android:title="View Logs"
-      android:key="viewLogs"
-      android:summary="Problem reporting and troubleshooting"/>
 </PreferenceScreen>

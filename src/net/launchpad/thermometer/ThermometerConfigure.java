@@ -19,13 +19,15 @@
 package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
+import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
-import android.preference.PreferenceActivity;
+import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -34,7 +36,7 @@ import android.util.Log;
  *
  * @author johan.walles@gmail.com
  */
-public class ThermometerConfigure extends PreferenceActivity {
+public class ThermometerConfigure extends PreferenceFragment {
     /**
      * Request code for text color.
      */
@@ -47,12 +49,17 @@ public class ThermometerConfigure extends PreferenceActivity {
         // Set the view layout resource to use.
         addPreferencesFromResource(R.xml.preferences);
 
+        final Activity activity = getActivity();
+        assert activity != null;
+
         // Fill in unset preferences from defaults
-        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+        PreferenceManager.setDefaultValues(activity, R.xml.preferences, false);
 
         // Set up the temperature unit selection list
         ListPreference temperatureUnits =
             (ListPreference)findPreference("temperatureUnitPref");
+        assert temperatureUnits != null;
+
         temperatureUnits.setSummary(temperatureUnits.getValue());
         temperatureUnits.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
@@ -66,27 +73,13 @@ public class ThermometerConfigure extends PreferenceActivity {
 
         // Set up the text color preference
         ColorPreferenceHandler.handle(
-            findPreference("textColorPref"), REQUEST_TEXT_COLOR, this, Color.WHITE);
-
-        // Set up the View Logs button to allow the user to view the Thermometer Widget logs
-        findPreference("viewLogs").setOnPreferenceClickListener(
-                new Preference.OnPreferenceClickListener() {
-                    @Override
-                    public boolean onPreferenceClick(Preference preference) {
-                        startActivity(new Intent(ThermometerConfigure.this, ThermometerLogViewer.class));
-
-                        return true; // True = click handled
-                    }
-                });
-
-        // Register "success" as a result for once the user is done
-        setResult(RESULT_OK);
+            findPreference("textColorPref"), REQUEST_TEXT_COLOR, getActivity(), Color.WHITE);
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data)
+    public void onActivityResult(int requestCode, int resultCode, Intent data)
     {
-        if (resultCode == RESULT_CANCELED) {
+        if (resultCode == Activity.RESULT_CANCELED) {
             Log.d(TAG, "Ignoring CANCEL result from request " + requestCode);
             return;
         }
@@ -94,8 +87,11 @@ public class ThermometerConfigure extends PreferenceActivity {
         if (data != null && data.hasExtra("org.openintents.extra.COLOR")) {
             int color = data.getIntExtra("org.openintents.extra.COLOR", 0);
 
+            Activity activity = getActivity();
+            assert activity != null;
+
             SharedPreferences.Editor preferencesEditor =
-                PreferenceManager.getDefaultSharedPreferences(this).edit();
+                PreferenceManager.getDefaultSharedPreferences(activity).edit();
             if (requestCode == REQUEST_TEXT_COLOR) {
                 Log.d(TAG, String.format("Text color updated to: 0x%06x", color));
                 preferencesEditor.putInt("textColorPref", color);

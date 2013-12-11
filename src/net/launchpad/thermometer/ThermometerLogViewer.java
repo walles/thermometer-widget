@@ -2,14 +2,19 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -28,23 +33,24 @@ import java.lang.reflect.Field;
 /**
  * Shows the Thermometer Widget logs.
  */
-public class ThermometerLogViewer extends Activity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+public class ThermometerLogViewer extends Fragment {
+    private TextView logView;
 
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         long t0 = System.currentTimeMillis();
 
-        setContentView(R.layout.log_viewer);
+        View view = inflater.inflate(R.layout.log_viewer, container, false);
+        assert view != null;
 
-        TextView logView = (TextView)findViewById(R.id.logView);
+        logView = (TextView)view.findViewById(R.id.logView);
         logView.setHorizontallyScrolling(true);
         logView.setHorizontalScrollBarEnabled(true);
 
         addLogsToView(logView);
 
         // Scroll log view to bottom
-        final ScrollView verticalScrollView = (ScrollView)findViewById(R.id.verticalScrollView);
+        final ScrollView verticalScrollView = (ScrollView)view.findViewById(R.id.verticalScrollView);
         verticalScrollView.post(new Runnable() {
             @Override
             public void run() {
@@ -52,7 +58,7 @@ public class ThermometerLogViewer extends Activity {
             }
         });
 
-        Button reportProblemButton = (Button)findViewById(R.id.reportProblemButton);
+        Button reportProblemButton = (Button)view.findViewById(R.id.reportProblemButton);
         reportProblemButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -62,23 +68,35 @@ public class ThermometerLogViewer extends Activity {
 
         long t1 = System.currentTimeMillis();
         Log.d(TAG, String.format("Setting up the log viewer took %dms", t1 - t0));
+
+        return view;
     }
 
     private static final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
 
+    @SuppressLint("WorldReadableFiles")
     private Uri getEmailLogAttachmentUri() {
+        if (logView == null) {
+            Log.e(TAG, "Log view not initialized before sending e-mail");
+            return null;
+        }
+
+        Activity activity = getActivity();
+        assert activity != null;
+
         // Dump log view contents into a file
         Writer out;
         try {
+            //noinspection deprecation
             out = new OutputStreamWriter(
-                    openFileOutput(LOG_DUMP_FILENAME, MODE_WORLD_READABLE));
+                    activity.openFileOutput(LOG_DUMP_FILENAME, Activity.MODE_WORLD_READABLE));
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Unable to open log dump file for writing", e);
             return null;
         }
         try {
-            TextView logView = (TextView)findViewById(R.id.logView);
-            out.write(logView.getText().toString());
+            CharSequence text = logView.getText();
+            out.write(text != null ? text.toString(): "<null>");
         } catch (IOException e) {
             Log.e(TAG, "Writing log dump failed", e);
             return null;
@@ -90,15 +108,21 @@ public class ThermometerLogViewer extends Activity {
             }
         }
 
-        File file = new File(getFilesDir(), LOG_DUMP_FILENAME);
+        File file = new File(activity.getFilesDir(), LOG_DUMP_FILENAME);
         return Uri.fromFile(file);
     }
 
     private String getEmailSubject() {
         String versionName;
         try {
-            versionName = getPackageManager()
-                    .getPackageInfo(getPackageName(), 0).versionName;
+            Activity activity = getActivity();
+            assert activity != null;
+
+            final PackageManager packageManager = activity.getPackageManager();
+            assert packageManager != null;
+
+            final PackageInfo packageInfo = packageManager.getPackageInfo(activity.getPackageName(), 0);
+            versionName = packageInfo.versionName;
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(TAG, "Couldn't find my own version number", e);
             versionName = "(unknown version)";
@@ -174,7 +198,7 @@ public class ThermometerLogViewer extends Activity {
 
     private static void addLogsToView(TextView logView) {
         // Load the logs into the log_viewer's logView.
-        Process process = null;
+        Process process;
         try {
             process = Runtime.getRuntime().exec("logcat -d -v time");
         } catch (IOException e) {
