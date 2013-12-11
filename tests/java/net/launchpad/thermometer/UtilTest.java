@@ -1,11 +1,8 @@
 package net.launchpad.thermometer;
 
-import org.junit.Test;
+import junit.framework.TestCase;
 
-import static org.junit.Assert.assertEquals;
-
-public class UtilTest {
-    @Test
+public class UtilTest extends TestCase {
     public void testMinutesToTimeOldString() {
         assertEquals("current", Util.minutesToTimeOldString(0));
         assertEquals("current", Util.minutesToTimeOldString(1));
