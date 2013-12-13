@@ -11,6 +11,18 @@ import android.os.Bundle;
  * Wrapper activity for preferences and log viewing.
  */
 public class ThermometerActions extends Activity {
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        ActionBar actionBar = getActionBar();
+        assert actionBar != null;
+
+        Tab selectedTab = actionBar.getSelectedTab();
+        assert selectedTab != null;
+
+        outState.putInt("selectedTab", selectedTab.getPosition());
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
@@ -28,6 +40,11 @@ public class ThermometerActions extends Activity {
                 setText("Logs").
                 setTabListener(new TabListener<ThermometerLogViewer>(
                         this, "logs", ThermometerLogViewer.class)));
+
+        if (savedInstanceState != null) {
+            int selectedTab = savedInstanceState.getInt("selectedTab", 0);
+            actionBar.selectTab(actionBar.getTabAt(selectedTab));
+        }
     }
 }
 
@@ -54,7 +71,7 @@ class TabListener<T extends Fragment> implements ActionBar.TabListener {
     }
 
     /* The following are each of the ActionBar.TabListener callbacks */
-
+    @Override
     public void onTabSelected(Tab tab, FragmentTransaction ft) {
         // Check if the fragment is already initialized
         if (mFragment == null) {
@@ -67,6 +84,7 @@ class TabListener<T extends Fragment> implements ActionBar.TabListener {
         }
     }
 
+    @Override
     public void onTabUnselected(Tab tab, FragmentTransaction ft) {
         if (mFragment != null) {
             // Detach the fragment, because another one is being attached
@@ -74,6 +92,7 @@ class TabListener<T extends Fragment> implements ActionBar.TabListener {
         }
     }
 
+    @Override
     public void onTabReselected(Tab tab, FragmentTransaction ft) {
         // User selected the already selected tab. Usually do nothing.
     }
