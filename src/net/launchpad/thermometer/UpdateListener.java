@@ -44,6 +44,11 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     private WidgetManager widgetManager;
 
     /**
+     * Our most recently received location update.
+     */
+    private Location lastKnownLocation;
+
+    /**
      * Create a new update listener.
      *
      * @param widgetManager The widget manager that will be informed about
@@ -85,8 +90,10 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     public Location getLocation() {
         LocationManager locationManager = getLocationManager();
 
-        Location lastKnownLocation =
-                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if (lastKnownLocation == null) {
+            lastKnownLocation =
+                    locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        }
 
         if (lastKnownLocation == null && Util.isRunningOnEmulator()) {
             Log.i(TAG,
@@ -181,7 +188,23 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
             networkLocation.getLatitude(),
             networkLocation.getLongitude()));
 
-        // Take a new measurement at our current location
+        try {
+            if (lastKnownLocation != null) {
+                int lastLocationAgeMinutes =
+                        (int)((System.currentTimeMillis() - lastKnownLocation.getTime())
+                                / (1000L * 60L));
+
+                if (lastLocationAgeMinutes < 10) {
+                    Log.i(TAG, String.format("Not updating widget; old location %s",
+                            Util.minutesToTimeOldString(lastLocationAgeMinutes)));
+                    return;
+                }
+            }
+        } finally {
+            lastKnownLocation = networkLocation;
+        }
+
+        // Take a new measurement at our new location
         widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
     }
 
