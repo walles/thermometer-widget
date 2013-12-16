@@ -32,6 +32,8 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.util.List;
+
 /**
  * Listens for events and requests widget updates as required.
  */
@@ -46,7 +48,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     /**
      * Our most recently received location update.
      */
-    private Location lastKnownLocation;
+    private Location cachedLocation;
 
     /**
      * Create a new update listener.
@@ -88,47 +90,69 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
      * @return the phone's last known location.
      */
     public Location getLocation() {
-        LocationManager locationManager = getLocationManager();
+        Location bestLocation;
 
-        if (lastKnownLocation == null) {
+        LocationManager locationManager = getLocationManager();
+        Location lastKnownLocation = null;
+        if (networkLocationAvailable()) {
             lastKnownLocation =
                     locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        } else {
+            Log.w(TAG, "Network positioning not available on this device");
         }
 
-        if (lastKnownLocation == null && Util.isRunningOnEmulator()) {
+        if (lastKnownLocation == null && cachedLocation == null) {
+            Log.w(TAG, "No cached location and no last known one");
+            bestLocation = null;
+        } else if (cachedLocation == null) {
+            bestLocation = lastKnownLocation;
+        } else if (lastKnownLocation == null) {
+            Log.w(TAG, "Have cached location but no last known");
+            bestLocation = cachedLocation;
+        } else if (cachedLocation.getTime() > lastKnownLocation.getTime()) {
+            long ageDifferenceSeconds =
+                    (cachedLocation.getTime() - lastKnownLocation.getTime()) / 1000L;
+            Log.w(TAG, "Cached location is " + ageDifferenceSeconds + "s newer than last known location");
+            bestLocation = cachedLocation;
+        } else {
+            bestLocation = lastKnownLocation;
+        }
+        cachedLocation = bestLocation;
+
+        if (bestLocation == null && Util.isRunningOnEmulator()) {
             Log.i(TAG,
                     "Location unknown but running on emulator, hard coding coordinates to Johan's place");
-            lastKnownLocation = new Location("Johan");
-            lastKnownLocation.setLatitude(59.3190);
-            lastKnownLocation.setLongitude(18.0518);
-            lastKnownLocation.setTime(System.currentTimeMillis());
+            bestLocation = new Location("Johan");
+            bestLocation.setLatitude(59.3190);
+            bestLocation.setLongitude(18.0518);
+            bestLocation.setTime(System.currentTimeMillis());
         }
 
-        if (lastKnownLocation == null) {
+        if (bestLocation == null) {
             Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
             triggerLocationUpdate("unknown");
 
             return null;
         }
 
-        long ageMs = System.currentTimeMillis() - lastKnownLocation.getTime();
+        long ageMs = System.currentTimeMillis() - bestLocation.getTime();
         int ageMinutes = (int)(ageMs / (60 * 1000));
         Log.d(TAG, String.format("Got a %s location from %s",
                 Util.minutesToTimeOldString(ageMinutes),
-                lastKnownLocation.getProvider()));
+                bestLocation.getProvider()));
 
         if (ageMinutes > 60) {
             triggerLocationUpdate("too old");
         }
 
-        return lastKnownLocation;
+        return bestLocation;
     }
 
     private void registerLocationListener(WidgetManager widgetManager) {
         Log.d(TAG, "Registering location listener...");
         LocationManager locationManager = getLocationManager();
 
-        if (!locationManager.getAllProviders().contains(LocationManager.NETWORK_PROVIDER)) {
+        if (!networkLocationAvailable()) {
             widgetManager.setStatus("Network position not available on device");
             Log.e(TAG, "Network positioning not available on this device");
 
@@ -142,6 +166,13 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
                 50000, // Every 50km we move
                 this);
         Log.d(TAG, "Location listener registered");
+    }
+
+    private boolean networkLocationAvailable() {
+        LocationManager locationManager = getLocationManager();
+
+        List<String> allProviders = locationManager.getAllProviders();
+        return allProviders.contains(LocationManager.NETWORK_PROVIDER);
     }
 
     /**
@@ -189,9 +220,9 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
             networkLocation.getLongitude()));
 
         try {
-            if (lastKnownLocation != null) {
+            if (cachedLocation != null) {
                 int lastLocationAgeMinutes =
-                        (int)((System.currentTimeMillis() - lastKnownLocation.getTime())
+                        (int)((System.currentTimeMillis() - cachedLocation.getTime())
                                 / (1000L * 60L));
 
                 if (lastLocationAgeMinutes < 10) {
@@ -201,7 +232,7 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
                 }
             }
         } finally {
-            lastKnownLocation = networkLocation;
+            cachedLocation = networkLocation;
         }
 
         // Take a new measurement at our new location
