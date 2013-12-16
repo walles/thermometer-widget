@@ -32,13 +32,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.pm.Signature;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationManager;
-import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
@@ -207,56 +203,6 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * This is the hash of the debug signature.  Look at the log messages if it needs updating.
-     */
-    private final static int DEBUG_SIGNATURE_HASH = 243186942;
-
-    /**
-     * Find out if we're running on an emulator.
-     *
-     * @return true if we're running on an emulator, false otherwise
-     */
-    private boolean isRunningOnEmulator() {
-        // Inspired by
-        // http://stackoverflow.com/questions/2799097/how-can-i-detect-when-an-android-application-is-running-in-the-emulator
-        return "sdk".equals(Build.PRODUCT);
-    }
-
-    /**
-     * Get the phone's last known location.
-     *
-     * @return the phone's last known location.
-     */
-    private Location getLocation() {
-        LocationManager locationManager =
-            (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
-        Location lastKnownLocation =
-            locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-
-        if (lastKnownLocation == null && isRunningOnEmulator()) {
-            Log.i(TAG,
-                "Location unknown but running on emulator, hard coding coordinates to Johan's place");
-            lastKnownLocation = new Location("Johan");
-            lastKnownLocation.setLatitude(59.3190);
-            lastKnownLocation.setLongitude(18.0518);
-            lastKnownLocation.setTime(System.currentTimeMillis());
-        }
-
-        if (lastKnownLocation == null) {
-            Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
-        } else {
-            long ageMs = System.currentTimeMillis() - lastKnownLocation.getTime();
-            int ageMinutes = (int)(ageMs / (60 * 1000));
-            Log.d(TAG, String.format("Got a %s location from %s",
-                    Util.minutesToTimeOldString(ageMinutes),
-                    lastKnownLocation.getProvider()));
-        }
-
-        return lastKnownLocation;
-    }
-
-    /**
      * Is network positioning enabled?
      *
      * @return True if network positioning is enabled.  False otherwise.
@@ -303,7 +249,15 @@ public class WidgetManager extends Service {
         }
         Log.d(TAG, "Weather observation fetch requested (" + why + ")...");
 
-        Location currentLocation = getLocation();
+        Location currentLocation;
+        synchronized (weatherLock) {
+            if (updateListener == null) {
+                Log.e(TAG, "Can't get location, update listener not available");
+                return;
+            }
+
+            currentLocation = updateListener.getLocation();
+        }
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
             setStatus("Locating phone...");
@@ -418,7 +372,7 @@ public class WidgetManager extends Service {
             preferences.getInt("textColorPref", Color.WHITE));
 
         Intent intent;
-        if (isPositioningEnabled() || isRunningOnEmulator()) {
+        if (isPositioningEnabled() || Util.isRunningOnEmulator()) {
             // Tell widget to launch the preferences activity on click
             intent = new Intent(this, ThermometerActions.class);
         } else {

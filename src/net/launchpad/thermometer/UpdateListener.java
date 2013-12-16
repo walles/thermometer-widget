@@ -19,6 +19,8 @@
 package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
+import android.os.Looper;
 import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -53,25 +55,86 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         }
         this.widgetManager = widgetManager;
 
-        Log.d(TAG, "Registering location listener...");
-        LocationManager locationManager = getLocationManager();
-
-        if (locationManager.getAllProviders().contains(LocationManager.NETWORK_PROVIDER)) {
-            widgetManager.setStatus("Locating phone...");
-            locationManager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER,
-                    41 * 60 * 1000, // Drift a bit relative to the periodic widget update
-                    50000, // Every 50km we move
-                    this);
-        } else {
-            widgetManager.setStatus("Network position not available on device");
-            Log.e(TAG, "Network positioning not available on this device");
-        }
+        registerLocationListener(widgetManager);
 
         Log.d(TAG, "Registering preferences change notification listener");
         SharedPreferences preferences =
             PreferenceManager.getDefaultSharedPreferences(widgetManager);
         preferences.registerOnSharedPreferenceChangeListener(this);
+    }
+
+    private void triggerLocationUpdate(String issue) {
+        Log.w(TAG, "Location " + issue + ", triggering update...");
+
+        Looper looper = Looper.myLooper();
+        if (looper == null) {
+            Log.e(TAG, "Have no looper, can't trigger location update");
+            return;
+        }
+        getLocationManager().requestSingleUpdate(
+                LocationManager.NETWORK_PROVIDER,
+                this,
+                looper);
+    }
+
+    /**
+     * Get the phone's last known location.
+     *
+     * @return the phone's last known location.
+     */
+    public Location getLocation() {
+        LocationManager locationManager = getLocationManager();
+
+        Location lastKnownLocation =
+                locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
+        if (lastKnownLocation == null && Util.isRunningOnEmulator()) {
+            Log.i(TAG,
+                    "Location unknown but running on emulator, hard coding coordinates to Johan's place");
+            lastKnownLocation = new Location("Johan");
+            lastKnownLocation.setLatitude(59.3190);
+            lastKnownLocation.setLongitude(18.0518);
+            lastKnownLocation.setTime(System.currentTimeMillis());
+        }
+
+        if (lastKnownLocation == null) {
+            Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
+            triggerLocationUpdate("unknown");
+
+            return null;
+        }
+
+        long ageMs = System.currentTimeMillis() - lastKnownLocation.getTime();
+        int ageMinutes = (int)(ageMs / (60 * 1000));
+        Log.d(TAG, String.format("Got a %s location from %s",
+                Util.minutesToTimeOldString(ageMinutes),
+                lastKnownLocation.getProvider()));
+
+        if (ageMinutes > 60) {
+            triggerLocationUpdate("too old");
+        }
+
+        return lastKnownLocation;
+    }
+
+    private void registerLocationListener(WidgetManager widgetManager) {
+        Log.d(TAG, "Registering location listener...");
+        LocationManager locationManager = getLocationManager();
+
+        if (!locationManager.getAllProviders().contains(LocationManager.NETWORK_PROVIDER)) {
+            widgetManager.setStatus("Network position not available on device");
+            Log.e(TAG, "Network positioning not available on this device");
+
+            return;
+        }
+
+        widgetManager.setStatus("Locating phone...");
+        locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                41 * 60 * 1000, // Drift a bit relative to the periodic widget update
+                50000, // Every 50km we move
+                this);
+        Log.d(TAG, "Location listener registered");
     }
 
     /**

@@ -1,5 +1,7 @@
 package net.launchpad.thermometer;
 
+import android.os.Build;
+
 public final class Util {
     /**
      * Uncallable constructor to keep people from instantiating this class.
@@ -43,5 +45,16 @@ public final class Util {
         }
 
         return ((int)(ageMinutes / (60 * 24 * 365.25))) + " years old";
+    }
+
+    /**
+     * Find out if we're running on an emulator.
+     *
+     * @return true if we're running on an emulator, false otherwise
+     */
+    public static boolean isRunningOnEmulator() {
+        // Inspired by
+        // http://stackoverflow.com/questions/2799097/how-can-i-detect-when-an-android-application-is-running-in-the-emulator
+        return "sdk".equals(Build.PRODUCT);
     }
 }
