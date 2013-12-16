@@ -43,10 +43,12 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(System.console().readLine("\n\$ Enter keystore path: "))
-            storePassword System.console().readLine("\n\$ Enter keystore password: ")
-            keyAlias System.console().readLine("\n\$ Enter key alias: ")
-            keyPassword System.console().readLine("\n\$ Enter key password: ")
+            if (System.console()) {
+                storeFile file(System.console().readLine("\n\$ Enter keystore path: "))
+                storePassword System.console().readLine("\n\$ Enter keystore password: ")
+                keyAlias System.console().readLine("\n\$ Enter key alias: ")
+                keyPassword System.console().readLine("\n\$ Enter key password: ")
+            }
         }
     }
 
