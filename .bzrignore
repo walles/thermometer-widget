@@ -1,7 +1,5 @@
 ./src/main/res/drawable-*/icon.png
 ./market-icon.png
-./gen
-./bin
 ./src/main/java/net/launchpad/thermometer/Constants.java
 ./local.properties
 ./gradlew
@@ -10,3 +8,5 @@
 ./.gradle
 ./build
 ./logo.blend?
+*.iml
+./.idea
