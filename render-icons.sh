@@ -12,7 +12,7 @@ BLENDER=$(mdfind 'kMDItemFSName = blender.app && kMDItemKind = Program')/Content
 
 echo $(date): Rendering icon...
 $BLENDER -b logo.blend --scene mdpi -o /tmp/mdpi -F PNG -x 1 -f 1
-mv /tmp/mdpi*.png res/drawable/icon.png
+mv /tmp/mdpi*.png src/main/res/drawable/icon.png
 
 echo $(date): Rendering Market graphics...
 $BLENDER -b logo.blend --scene market -o /tmp/market -F PNG -x 1 -f 1

@@ -1,8 +1,8 @@
-./res/drawable/icon.png
+./src/main/res/drawable/icon.png
 ./market-icon.png
 ./gen
 ./bin
-./src/net/launchpad/thermometer/Constants.java
+./src/main/java/net/launchpad/thermometer/Constants.java
 ./local.properties
 ./gradlew
 ./gradlew.bat
