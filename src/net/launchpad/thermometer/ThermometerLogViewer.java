@@ -44,17 +44,23 @@ public class ThermometerLogViewer extends Fragment {
         protected CharSequence doInBackground(Void... voids) {
             long t0 = System.currentTimeMillis();
 
+            StringBuilder builder = new StringBuilder();
+            builder.append("Device description:\n");
+            builder.append(getDeviceDescription());
+            builder.append('\n');
+
             Process process;
             try {
                 process = Runtime.getRuntime().exec("logcat -d -v time");
             } catch (IOException e) {
                 Log.e(TAG, "exec(logcat) failed", e);
-                return "exec(logcat) failed";
+
+                builder.append("exec(logcat) failed");
+                return builder;
             }
 
             BufferedReader bufferedReader =
                     new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder builder = new StringBuilder();
             try {
                 String line;
                 while ((line = bufferedReader.readLine()) != null) {
@@ -208,24 +214,6 @@ public class ThermometerLogViewer extends Fragment {
         return text.toString();
     }
 
-    private String getEmailText() {
-        StringWriter text = new StringWriter();
-
-        @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
-        PrintWriter textWriter = new PrintWriter(text);
-
-        textWriter.println("Hi!");
-        textWriter.println();
-        textWriter.println("Here's what I'm running on:");
-        textWriter.print(getDeviceDescription());
-        textWriter.println();
-        textWriter.print("I'm having problems with the Thermometer Widget.");
-        textWriter.println(" Here's a very detailed explanation of what's wrong:");
-        textWriter.println();
-
-        return text.toString();
-    }
-
     private void emailDeveloper() {
         // Compose an e-mail with the log file attached
         Intent intent = new Intent(Intent.ACTION_SEND);
@@ -236,8 +224,6 @@ public class ThermometerLogViewer extends Fragment {
                 new String[] { "johan.walles@gmail.com" });
 
         intent.putExtra(Intent.EXTRA_SUBJECT, getEmailSubject());
-
-        intent.putExtra(Intent.EXTRA_TEXT, getEmailText());
 
         // Attach the newly dumped log file
         Uri uri = getEmailLogAttachmentUri();
