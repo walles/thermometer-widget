@@ -1,4 +1,4 @@
-./src/main/res/drawable/icon.png
+./src/main/res/drawable-*/icon.png
 ./market-icon.png
 ./gen
 ./bin
@@ -9,3 +9,4 @@
 ./gradle
 ./.gradle
 ./build
+./logo.blend?
