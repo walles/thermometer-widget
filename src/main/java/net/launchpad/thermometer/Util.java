@@ -55,6 +55,14 @@ public final class Util {
     public static boolean isRunningOnEmulator() {
         // Inspired by
         // http://stackoverflow.com/questions/2799097/how-can-i-detect-when-an-android-application-is-running-in-the-emulator
-        return "sdk".equals(Build.PRODUCT);
+        if ("sdk".equals(Build.PRODUCT)) {
+            return true;
+        }
+
+        if ("google_sdk".equals(Build.PRODUCT)) {
+            return true;
+        }
+
+        return false;
     }
 }
