@@ -33,4 +33,11 @@ android {
             signingConfig signingConfigs.release
         }
     }
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        compile 'com.larswerkman:HoloColorPicker:1.1'
+    }
 }

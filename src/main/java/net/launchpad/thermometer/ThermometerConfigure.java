@@ -21,6 +21,8 @@ package net.launchpad.thermometer;
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -30,6 +32,10 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import com.larswerkman.holocolorpicker.ColorPicker;
+import com.larswerkman.holocolorpicker.SVBar;
 
 /**
  * Configuration dialog for the {@link ThermometerWidget}.
@@ -41,6 +47,9 @@ public class ThermometerConfigure extends PreferenceFragment {
      * Request code for text color.
      */
     private static final int REQUEST_TEXT_COLOR = 1;
+    private ColorPicker colorPicker;
+    private View colorPickerView;
+    private Preference colorPreference;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -71,9 +80,83 @@ public class ThermometerConfigure extends PreferenceFragment {
             }
         });
 
+        setUpColorPreference();
+    }
+
+    private void setUpColorPreference() {
         // Set up the text color preference
-        ColorPreferenceHandler.handle(
-            findPreference("textColorPref"), REQUEST_TEXT_COLOR, getActivity(), Color.WHITE);
+        final Activity activity = getActivity();
+        assert activity != null;
+
+        colorPickerView = activity.getLayoutInflater().inflate(R.layout.color_picker, null);
+        assert colorPickerView != null;
+
+        colorPicker = (ColorPicker)colorPickerView.findViewById(R.id.picker);
+
+        // Connect the color picker with the Saturation + Value bar
+        SVBar svBar = (SVBar)colorPickerView.findViewById(R.id.svbar);
+        colorPicker.addSVBar(svBar);
+
+        colorPreference = findPreference("textColorPref");
+        assert colorPreference != null;
+
+        final SharedPreferences preferences = colorPreference.getSharedPreferences();
+        assert preferences != null;
+
+        int initialColor = preferences.getInt(colorPreference.getKey(), Color.WHITE);
+        setColorPreferenceSummary(initialColor);
+
+        colorPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(final Preference preference) {
+                int currentColor = preferences.getInt(preference.getKey(), Color.WHITE);
+
+                // Inspired by http://stackoverflow.com/questions/6526874/call-removeview-on-the-childs-parent-first
+                ViewGroup parent = (ViewGroup)colorPickerView.getParent();
+                if (parent != null) {
+                    parent.removeView(colorPickerView);
+                }
+
+                colorPicker.setColor(currentColor);
+                colorPicker.setOldCenterColor(currentColor);
+
+                final AlertDialog.Builder aBuilder = new AlertDialog.Builder(activity);
+                aBuilder.setView(colorPickerView);
+                aBuilder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        setColor(colorPicker.getColor());
+                    }
+                });
+                aBuilder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // This method intentionally left blank
+                    }
+                });
+                aBuilder.show();
+                return true;
+            }
+        });
+
+    }
+
+    private void setColorPreferenceSummary(int color) {
+        String colorString = String.format("0x%06x", color & 0xffffff);
+        colorPreference.setSummary("Current color: " + colorString);
+    }
+
+    private void setColor(int color) {
+        SharedPreferences sharedPreferences = colorPreference.getSharedPreferences();
+        assert sharedPreferences != null;
+
+        sharedPreferences
+                .edit()
+                .putInt(colorPreference.getKey(), color)
+                .commit();
+
+        Log.d(TAG, String.format("New color picked: 0x%06x", color));
+        setColorPreferenceSummary(color);
     }
 
     @Override
