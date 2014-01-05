@@ -196,8 +196,6 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     public void onSharedPreferenceChanged(SharedPreferences preferences,
         String key)
     {
-        getLocationManager().removeUpdates(this);
-
         Log.d(TAG, "Preference changed, updating UI: " + key);
         widgetManager.updateUi();
     }
