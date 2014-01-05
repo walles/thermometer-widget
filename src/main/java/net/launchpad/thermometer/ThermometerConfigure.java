@@ -23,7 +23,6 @@ import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -46,7 +45,6 @@ public class ThermometerConfigure extends PreferenceFragment {
     /**
      * Request code for text color.
      */
-    private static final int REQUEST_TEXT_COLOR = 1;
     private ColorPicker colorPicker;
     private View colorPickerView;
     private Preference colorPreference;
@@ -150,47 +148,17 @@ public class ThermometerConfigure extends PreferenceFragment {
         SharedPreferences sharedPreferences = colorPreference.getSharedPreferences();
         assert sharedPreferences != null;
 
-        sharedPreferences
-                .edit()
-                .putInt(colorPreference.getKey(), color)
-                .commit();
-
-        Log.d(TAG, String.format("New color picked: 0x%06x", color));
-        setColorPreferenceSummary(color);
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data)
-    {
-        if (resultCode == Activity.RESULT_CANCELED) {
-            Log.d(TAG, "Ignoring CANCEL result from request " + requestCode);
+        boolean colorUpdated =
+                sharedPreferences
+                        .edit()
+                        .putInt(colorPreference.getKey(), color)
+                        .commit();
+        if (!colorUpdated) {
+            Log.e(TAG, "Failed to commit color preference change");
             return;
         }
 
-        if (data != null && data.hasExtra("org.openintents.extra.COLOR")) {
-            int color = data.getIntExtra("org.openintents.extra.COLOR", 0);
-
-            Activity activity = getActivity();
-            assert activity != null;
-
-            SharedPreferences.Editor preferencesEditor =
-                PreferenceManager.getDefaultSharedPreferences(activity).edit();
-            if (requestCode == REQUEST_TEXT_COLOR) {
-                Log.d(TAG, String.format("Text color updated to: 0x%06x", color));
-                preferencesEditor.putInt("textColorPref", color);
-            } else {
-                Log.w(TAG,
-                    String.format("Got color selection 0x%06x in unknown request code %d",
-                        color,
-                        requestCode));
-            }
-            if (!preferencesEditor.commit()) {
-                Log.w(TAG, "Failed updating preferences with new color");
-            }
-        } else {
-            Log.w(TAG,
-                String.format("Ignoring activity result: request=%d, result=%d, data=%s",
-                    requestCode, resultCode, data != null ? data.toString() : null));
-        }
+        Log.d(TAG, String.format("New color picked: 0x%06x", color));
+        setColorPreferenceSummary(color);
     }
 }
