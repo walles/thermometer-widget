@@ -33,6 +33,7 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Listens for events and requests widget updates as required.
@@ -192,11 +193,28 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         return locationManager;
     }
 
+    private String describePreference(SharedPreferences preferences, String key) {
+        Map<String, ?> map = preferences.getAll();
+        assert map != null;
+
+        if (!map.containsKey(key)) {
+            return "<unset>";
+        }
+
+        Object value = map.get(key);
+        if (value instanceof Integer) {
+            return String.format("0x%06x", (Integer)value);
+        }
+        return value.toString();
+    }
+
     @Override
     public void onSharedPreferenceChanged(SharedPreferences preferences,
         String key)
     {
-        Log.d(TAG, "Preference changed, updating UI: " + key);
+        Log.d(TAG, String.format("Preference changed, updating UI: %s=>%s",
+                key,
+                describePreference(preferences, key)));
         widgetManager.updateUi();
     }
 
