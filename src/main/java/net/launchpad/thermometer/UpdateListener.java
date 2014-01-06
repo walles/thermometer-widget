@@ -29,9 +29,9 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
 
@@ -39,12 +39,13 @@ import java.util.Map;
  * Listens for events and requests widget updates as required.
  */
 public class UpdateListener
-implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
-{
+implements LocationListener, Closeable {
+    private boolean closed = false;
+
     /**
      * Widget controller.
      */
-    private WidgetManager widgetManager;
+    private final WidgetManager widgetManager;
 
     /**
      * Our most recently received location update.
@@ -52,12 +53,17 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
     private Location cachedLocation;
 
     /**
+     * Updates widget when preferences change.
+     */
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
+
+    /**
      * Create a new update listener.
      *
      * @param widgetManager The widget manager that will be informed about
      * updates.
      */
-    public UpdateListener(WidgetManager widgetManager) {
+    public UpdateListener(final WidgetManager widgetManager) {
         if (widgetManager == null) {
             throw new NullPointerException("widgetManager must be non-null");
         }
@@ -66,9 +72,22 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         registerLocationListener(widgetManager);
 
         Log.d(TAG, "Registering preferences change notification listener");
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(widgetManager);
-        preferences.registerOnSharedPreferenceChangeListener(this);
+
+        preferenceChangeListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            @Override
+            public void onSharedPreferenceChanged(SharedPreferences preferences, String key) {
+                Log.d(TAG, String.format("Preference changed, updating UI: %s=>%s",
+                        key,
+                        describePreference(preferences, key)));
+
+                if (preferences != widgetManager.getPreferences()) {
+                    Log.w(TAG, "Preference changed in unexpected SharedPreferences instance");
+                }
+
+                widgetManager.updateUi();
+            }
+        };
+        widgetManager.getPreferences().registerOnSharedPreferenceChangeListener(preferenceChangeListener);
     }
 
     private void triggerLocationUpdate(String issue) {
@@ -208,24 +227,18 @@ implements SharedPreferences.OnSharedPreferenceChangeListener, LocationListener
         return value.toString();
     }
 
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences preferences,
-        String key)
-    {
-        Log.d(TAG, String.format("Preference changed, updating UI: %s=>%s",
-                key,
-                describePreference(preferences, key)));
-        widgetManager.updateUi();
-    }
-
     /**
      * Free up system resources and stop listening.
      */
+    @Override
     public void close() {
+        if (closed) {
+            throw new IllegalStateException("Already closed");
+        }
+        closed = true;
+
         Log.d(TAG, "Deregistering preferences change listener...");
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(widgetManager);
-        preferences.unregisterOnSharedPreferenceChangeListener(this);
+        widgetManager.getPreferences().unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
         getLocationManager().removeUpdates(this);
     }
 

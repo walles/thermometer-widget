@@ -63,6 +63,8 @@ public class WidgetManager extends Service {
      */
     private UpdateListener updateListener;
 
+    private final SharedPreferences preferences;
+
     /**
      * You need to synchronize on this before accessing any of the other
      * fields of this class.
@@ -96,8 +98,14 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         temperatureFetcher = new TemperatureFetcher(this);
         temperatureFetcher.start();
+    }
+
+    public SharedPreferences getPreferences() {
+        return preferences;
     }
 
     /**
@@ -307,8 +315,6 @@ public class WidgetManager extends Service {
         Log.d(TAG, "Updating widget display...");
         Weather weatherObservation = getWeather();
 
-        SharedPreferences preferences =
-            PreferenceManager.getDefaultSharedPreferences(this);
         boolean windChillComputed = false;
 
         String degrees = "--";
