@@ -63,7 +63,10 @@ public class WidgetManager extends Service {
      */
     private UpdateListener updateListener;
 
-    private final SharedPreferences preferences;
+    /**
+     * Must be accessed through {@link #getPreferences()}.
+     */
+    private SharedPreferences preferences;
 
     /**
      * You need to synchronize on this before accessing any of the other
@@ -98,13 +101,15 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-
         temperatureFetcher = new TemperatureFetcher(this);
         temperatureFetcher.start();
     }
 
-    public SharedPreferences getPreferences() {
+    public synchronized SharedPreferences getPreferences() {
+        if (preferences == null) {
+            preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        }
+
         return preferences;
     }
 
@@ -322,7 +327,7 @@ public class WidgetManager extends Service {
         if (weatherObservation != null) {
             Log.d(TAG, "Weather data is " + weatherObservation);
 
-            if (preferences.getBoolean("showMetadataPref", false)) {
+            if (getPreferences().getBoolean("showMetadataPref", false)) {
                 metadata =
                     toHoursString(weatherObservation.getObservationTime()).toString();
                 if (weatherObservation.getStationName() != null) {
@@ -337,9 +342,9 @@ public class WidgetManager extends Service {
             }
 
             boolean withWindChill =
-                preferences.getBoolean("windChillPref", false);
+                getPreferences().getBoolean("windChillPref", false);
             boolean inFarenheit =
-                "Farenheit".equals(preferences.getString("temperatureUnitPref", "Celsius"));
+                "Farenheit".equals(getPreferences().getString("temperatureUnitPref", "Celsius"));
 
             int unchilledDegrees;
             int chilledDegrees;
@@ -370,12 +375,12 @@ public class WidgetManager extends Service {
         Log.d(TAG, "Displaying temperature: <" + temperatureString + ">");
         remoteViews.setTextViewText(R.id.TemperatureView, temperatureString);
         remoteViews.setTextColor(R.id.TemperatureView,
-            preferences.getInt("textColorPref", Color.WHITE));
+            getPreferences().getInt("textColorPref", Color.WHITE));
 
         Log.d(TAG, "Displaying metadata: <" + metadata + ">");
         remoteViews.setTextViewText(R.id.MetadataView, metadata);
         remoteViews.setTextColor(R.id.MetadataView,
-            preferences.getInt("textColorPref", Color.WHITE));
+            getPreferences().getInt("textColorPref", Color.WHITE));
 
         Intent intent;
         if (isPositioningEnabled() || Util.isRunningOnEmulator()) {
