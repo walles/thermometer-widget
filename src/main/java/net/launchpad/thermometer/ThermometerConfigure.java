@@ -35,6 +35,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import com.larswerkman.holocolorpicker.ColorPicker;
 import com.larswerkman.holocolorpicker.SVBar;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Configuration dialog for the {@link ThermometerWidget}.
@@ -46,7 +47,7 @@ public class ThermometerConfigure extends PreferenceFragment {
      * Request code for text color.
      */
     private ColorPicker colorPicker;
-    private View colorPickerView;
+    @NotNull
     private Preference colorPreference;
 
     @Override
@@ -70,7 +71,7 @@ public class ThermometerConfigure extends PreferenceFragment {
         temperatureUnits.setSummary(temperatureUnits.getValue());
         temperatureUnits.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
-            public boolean onPreferenceChange(Preference preference, Object value) {
+            public boolean onPreferenceChange(@NotNull Preference preference, @NotNull Object value) {
                 preference.setSummary(value.toString());
 
                 // true == accept the new value
@@ -86,7 +87,7 @@ public class ThermometerConfigure extends PreferenceFragment {
         final Activity activity = getActivity();
         assert activity != null;
 
-        colorPickerView = activity.getLayoutInflater().inflate(R.layout.color_picker, null);
+        final View colorPickerView = activity.getLayoutInflater().inflate(R.layout.color_picker, null);
         assert colorPickerView != null;
 
         colorPicker = (ColorPicker)colorPickerView.findViewById(R.id.picker);
@@ -95,8 +96,9 @@ public class ThermometerConfigure extends PreferenceFragment {
         SVBar svBar = (SVBar)colorPickerView.findViewById(R.id.svbar);
         colorPicker.addSVBar(svBar);
 
-        colorPreference = findPreference("textColorPref");
-        assert colorPreference != null;
+        Preference preference = findPreference("textColorPref");
+        assert preference != null;
+        colorPreference = preference;
 
         final SharedPreferences preferences = colorPreference.getSharedPreferences();
         assert preferences != null;
@@ -106,7 +108,7 @@ public class ThermometerConfigure extends PreferenceFragment {
 
         colorPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
-            public boolean onPreferenceClick(final Preference preference) {
+            public boolean onPreferenceClick(@NotNull final Preference preference) {
                 int currentColor = preferences.getInt(preference.getKey(), Color.WHITE);
 
                 // Inspired by http://stackoverflow.com/questions/6526874/call-removeview-on-the-childs-parent-first

@@ -7,6 +7,8 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -37,11 +39,13 @@ public class Weather {
     /**
      * The name of the weather station.
      */
+    @Nullable
     private final String stationName;
 
     /**
      * When this weather was observed.
      */
+    @Nullable
     private final Calendar observationTime;
 
     /**
@@ -49,6 +53,7 @@ public class Weather {
      *
      * @return When this weather observation is from.
      */
+    @Nullable
     public Calendar getObservationTime() {
         return observationTime;
     }
@@ -60,7 +65,8 @@ public class Weather {
      *
      * @return A calendar representing the same time, but in the local time zone.
      */
-    static Calendar toLocal(Calendar utc) {
+    @NotNull
+    static Calendar toLocal(@NotNull Calendar utc) {
         Calendar local = new GregorianCalendar();
         local.setTimeInMillis(utc.getTimeInMillis());
         return local;
@@ -73,7 +79,8 @@ public class Weather {
      *
      * @return A capitalized version of capitalizeMe.
      */
-    private static String capitalize(CharSequence capitalizeMe) {
+    @NotNull
+    private static String capitalize(@NotNull CharSequence capitalizeMe) {
         StringBuilder builder = new StringBuilder(capitalizeMe.length());
         boolean shouldCapitalize = true;
         for (int i = 0; i < capitalizeMe.length(); i++) {
@@ -103,7 +110,8 @@ public class Weather {
      *
      * @return A pretty station name.
      */
-    private static String prettifyStationName(String ugly) {
+    @Nullable
+    private static String prettifyStationName(@Nullable String ugly) {
         if (ugly == null) {
             return null;
         }
@@ -159,11 +167,7 @@ public class Weather {
      * @throws IllegalArgumentException with an explanatory message on trouble
      */
     @SuppressWarnings("StringConcatenationMissingWhitespace")
-    public Weather(JSONObject weatherObservation) {
-        if (weatherObservation == null) {
-            throw new NullPointerException("Want a non-null JSON object to parse");
-        }
-
+    public Weather(@NotNull JSONObject weatherObservation) {
         try {
             if (weatherObservation.has("message")) {
                 String message = weatherObservation.getString("message");
@@ -305,6 +309,7 @@ public class Weather {
      * @return The weather station name, or null if the name of the weather
      * station is unknown.
      */
+    @Nullable
     public String getStationName() {
         return stationName;
     }

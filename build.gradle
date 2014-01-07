@@ -39,5 +39,6 @@ android {
     }
     dependencies {
         compile 'com.larswerkman:HoloColorPicker:1.1'
+        compile 'com.intellij:annotations:+@jar'
     }
 }

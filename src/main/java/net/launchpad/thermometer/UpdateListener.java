@@ -30,6 +30,8 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
 import android.util.Log;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
 import java.util.List;
@@ -45,16 +47,19 @@ implements LocationListener, Closeable {
     /**
      * Widget controller.
      */
+    @NotNull
     private final WidgetManager widgetManager;
 
     /**
      * Our most recently received location update.
      */
+    @Nullable
     private Location cachedLocation;
 
     /**
      * Updates widget when preferences change.
      */
+    @NotNull
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
 
     /**
@@ -63,10 +68,7 @@ implements LocationListener, Closeable {
      * @param widgetManager The widget manager that will be informed about
      * updates.
      */
-    public UpdateListener(final WidgetManager widgetManager) {
-        if (widgetManager == null) {
-            throw new NullPointerException("widgetManager must be non-null");
-        }
+    public UpdateListener(@NotNull final WidgetManager widgetManager) {
         this.widgetManager = widgetManager;
 
         registerLocationListener(widgetManager);
@@ -75,7 +77,7 @@ implements LocationListener, Closeable {
 
         preferenceChangeListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
-            public void onSharedPreferenceChanged(SharedPreferences preferences, String key) {
+            public void onSharedPreferenceChanged(@NotNull SharedPreferences preferences, String key) {
                 Log.d(TAG, String.format("Preference changed, updating UI: %s=>%s",
                         key,
                         describePreference(preferences, key)));
@@ -109,6 +111,7 @@ implements LocationListener, Closeable {
      *
      * @return the phone's last known location.
      */
+    @Nullable
     public Location getLocation() {
         Location bestLocation;
 
@@ -168,7 +171,7 @@ implements LocationListener, Closeable {
         return bestLocation;
     }
 
-    private void registerLocationListener(WidgetManager widgetManager) {
+    private void registerLocationListener(@NotNull WidgetManager widgetManager) {
         Log.d(TAG, "Registering location listener...");
         LocationManager locationManager = getLocationManager();
 
@@ -202,6 +205,7 @@ implements LocationListener, Closeable {
      *
      * @throws RuntimeException if the location manager cannot be found.
      */
+    @NotNull
     private LocationManager getLocationManager() {
         LocationManager locationManager =
             (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
@@ -212,7 +216,7 @@ implements LocationListener, Closeable {
         return locationManager;
     }
 
-    private String describePreference(SharedPreferences preferences, String key) {
+    private String describePreference(@NotNull SharedPreferences preferences, String key) {
         Map<String, ?> map = preferences.getAll();
         assert map != null;
 
@@ -243,7 +247,7 @@ implements LocationListener, Closeable {
     }
 
     @Override
-    public void onLocationChanged(Location networkLocation) {
+    public void onLocationChanged(@NotNull Location networkLocation) {
         Log.d(TAG, String.format("Location updated to lat=%.4f, lon=%.4f",
             networkLocation.getLatitude(),
             networkLocation.getLongitude()));

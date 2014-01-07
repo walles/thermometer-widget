@@ -19,6 +19,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -40,6 +42,7 @@ public class ThermometerLogViewer extends Fragment {
     private ScrollView verticalScrollView;
 
     private class ReadLogsTask extends AsyncTask<Void, Void, CharSequence> {
+        @NotNull
         @Override
         protected CharSequence doInBackground(Void... voids) {
             long t0 = System.currentTimeMillis();
@@ -101,7 +104,7 @@ public class ThermometerLogViewer extends Fragment {
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         long t0 = System.currentTimeMillis();
 
         View view = inflater.inflate(R.layout.log_viewer, container, false);
@@ -134,6 +137,7 @@ public class ThermometerLogViewer extends Fragment {
 
     private static final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
 
+    @Nullable
     @SuppressLint("WorldReadableFiles")
     private Uri getEmailLogAttachmentUri() {
         if (logView == null) {
@@ -172,6 +176,7 @@ public class ThermometerLogViewer extends Fragment {
         return Uri.fromFile(file);
     }
 
+    @NotNull
     private String getEmailSubject() {
         String versionName;
         try {

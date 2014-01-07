@@ -1,6 +1,7 @@
 package net.launchpad.thermometer;
 
 import android.os.Build;
+import org.jetbrains.annotations.NotNull;
 
 public final class Util {
     /**
@@ -19,6 +20,7 @@ public final class Util {
      *
      * @return A string like "2 hours old".
      */
+    @NotNull
     public static String minutesToTimeOldString(int ageMinutes) {
         if (ageMinutes <= 1) {
             return "current";

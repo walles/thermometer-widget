@@ -2,6 +2,7 @@ package net.launchpad.thermometer;
 
 import android.content.Intent;
 import junit.framework.TestCase;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Validate {@link WidgetManager}.
@@ -11,7 +12,7 @@ import junit.framework.TestCase;
 public class WidgetManagerTest extends TestCase {
     private static class TestableWidgetManager extends WidgetManager {
         @Override
-        public void updateMeasurement(UpdateReason reason) {
+        public void updateMeasurement(@NotNull UpdateReason reason) {
             // This method intentionally left blank
         }
     }

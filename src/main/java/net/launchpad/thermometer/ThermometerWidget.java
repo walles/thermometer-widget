@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import android.os.Bundle;
 import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -26,6 +27,7 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A widget displaying the current outdoor temperature.
@@ -40,7 +42,7 @@ public class ThermometerWidget extends AppWidgetProvider {
 
     @Override
     public synchronized void onUpdate(
-        Context context,
+        @NotNull Context context,
         AppWidgetManager appWidgetManager,
         int[] appWidgetIds)
     {
@@ -48,7 +50,7 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     @Override
-    public synchronized void onReceive(Context context, Intent intent) {
+    public synchronized void onReceive(@NotNull Context context, @NotNull Intent intent) {
         // v1.5 fix that doesn't call onDelete Action
         final String action = intent.getAction();
         if (AppWidgetManager.ACTION_APPWIDGET_DELETED.equals(action)) {
@@ -60,18 +62,22 @@ public class ThermometerWidget extends AppWidgetProvider {
         }
     }
 
-    private void handleWidgetDelete(Context context, Intent intent) {
+    private void handleWidgetDelete(@NotNull Context context, @NotNull Intent intent) {
         Log.d(TAG, "onReceive() got DELETED event");
-        final int appWidgetId = intent.getExtras().getInt(
-            AppWidgetManager.EXTRA_APPWIDGET_ID,
-            AppWidgetManager.INVALID_APPWIDGET_ID);
+
+        Bundle extras = intent.getExtras();
+        assert extras != null;
+
+        final int appWidgetId = extras.getInt(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                AppWidgetManager.INVALID_APPWIDGET_ID);
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
             Log.d(TAG, "onReceive() faking call to onDeleted()");
             this.onDeleted(context, new int[] { appWidgetId });
         }
     }
 
-    private void handleConnectivityChange(Context context) {
+    private void handleConnectivityChange(@NotNull Context context) {
         Log.d(TAG, "Network connectivity changed...");
         ConnectivityManager connectivityManager =
                 (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -92,7 +98,7 @@ public class ThermometerWidget extends AppWidgetProvider {
     }
 
     @Override
-    public synchronized void onDeleted(Context context, int[] deletedIds) {
+    public synchronized void onDeleted(@NotNull Context context, int[] deletedIds) {
         WidgetManager.onUpdate(context, UpdateReason.DISPLAY_OR_TIMER);
     }
 }

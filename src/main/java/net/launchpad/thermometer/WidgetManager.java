@@ -41,6 +41,8 @@ import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.RemoteViews;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * This class contains all the logic for {@link ThermometerWidget}.
@@ -61,6 +63,7 @@ public class WidgetManager extends Service {
     /**
      * Listens for events and requests widget updates as required.
      */
+    @Nullable
     private UpdateListener updateListener;
 
     /**
@@ -79,6 +82,7 @@ public class WidgetManager extends Service {
      * <p>
      * You must synchronize on {@link #weatherLock} before accessing this.
      */
+    @Nullable
     private Weather weather;
 
     /**
@@ -120,7 +124,7 @@ public class WidgetManager extends Service {
      *
      * @param why Why the update is wanted.
      */
-    public static void onUpdate(Context context, UpdateReason why) {
+    public static void onUpdate(@NotNull Context context, @NotNull UpdateReason why) {
         Intent intent = new Intent(context, WidgetManager.class);
         intent.putExtra(UPDATE_REASON, why.name());
         context.startService(intent);
@@ -131,7 +135,7 @@ public class WidgetManager extends Service {
      *
      * @param weather What the weather is like.
      */
-    public void setWeather(Weather weather) {
+    public void setWeather(@Nullable Weather weather) {
         if (weather == null) {
             return;
         }
@@ -157,6 +161,7 @@ public class WidgetManager extends Service {
      *
      * @return What the weather is like around here.
      */
+    @Nullable
     public Weather getWeather() {
         synchronized (weatherLock) {
             return this.weather;
@@ -171,7 +176,8 @@ public class WidgetManager extends Service {
      *
      * @return Either "15:42" or "3:42PM".
      */
-    private CharSequence toHoursString(Calendar time) {
+    @NotNull
+    private CharSequence toHoursString(@NotNull Calendar time) {
         String format;
 
         if (DateFormat.is24HourFormat(this)) {
@@ -256,10 +262,7 @@ public class WidgetManager extends Service {
      *
      * @param why Why should the temperature be updated?
      */
-    public void updateMeasurement(UpdateReason why) {
-        if (why == null) {
-            why = UpdateReason.UNKNOWN;
-        }
+    public void updateMeasurement(@NotNull UpdateReason why) {
         Log.d(TAG, "Weather observation fetch requested (" + why + ")...");
 
         Location currentLocation;
@@ -303,6 +306,7 @@ public class WidgetManager extends Service {
      */
     private int[] getWidgetIds() {
         AppWidgetManager manager = AppWidgetManager.getInstance(this);
+        assert manager != null;
 
         int[] appWidgetIds =
             manager.getAppWidgetIds(
@@ -328,10 +332,19 @@ public class WidgetManager extends Service {
             Log.d(TAG, "Weather data is " + weatherObservation);
 
             if (getPreferences().getBoolean("showMetadataPref", false)) {
-                metadata =
-                    toHoursString(weatherObservation.getObservationTime()).toString();
+                Calendar observationTime = weatherObservation.getObservationTime();
+                if (observationTime != null) {
+                    metadata =
+                            toHoursString(observationTime).toString();
+                } else {
+                    metadata = "";
+                }
+
                 if (weatherObservation.getStationName() != null) {
-                    metadata += " " + weatherObservation.getStationName();
+                    if (!metadata.isEmpty()) {
+                        metadata += " ";
+                    }
+                    metadata += weatherObservation.getStationName();
                 }
                 if (weatherObservation.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
                     // Present excuses for our old data
@@ -396,6 +409,8 @@ public class WidgetManager extends Service {
 
         AppWidgetManager appWidgetManager =
             AppWidgetManager.getInstance(this);
+        assert appWidgetManager != null;
+
         synchronized (weatherLock) {
             int[] widgetIds = getWidgetIds();
             if (widgetIds.length == 0) {
@@ -444,7 +459,7 @@ public class WidgetManager extends Service {
      *
      * @param intent The intent that triggered the update.
      */
-    void scheduleTemperatureUpdate(Intent intent) {
+    void scheduleTemperatureUpdate(@Nullable Intent intent) {
         UpdateReason why;
         String reasonName = null;
         try {

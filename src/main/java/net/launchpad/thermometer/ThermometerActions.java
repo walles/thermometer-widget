@@ -6,13 +6,15 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Wrapper activity for preferences and log viewing.
  */
 public class ThermometerActions extends Activity {
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NotNull Bundle outState) {
         ActionBar actionBar = getActionBar();
         assert actionBar != null;
 
@@ -23,7 +25,7 @@ public class ThermometerActions extends Activity {
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         ActionBar actionBar = getActionBar();
@@ -72,7 +74,7 @@ class TabListener<T extends Fragment> implements ActionBar.TabListener {
 
     /* The following are each of the ActionBar.TabListener callbacks */
     @Override
-    public void onTabSelected(Tab tab, FragmentTransaction ft) {
+    public void onTabSelected(Tab tab, @NotNull FragmentTransaction ft) {
         // Check if the fragment is already initialized
         if (mFragment == null) {
             // If not, instantiate and add it to the activity
@@ -85,7 +87,7 @@ class TabListener<T extends Fragment> implements ActionBar.TabListener {
     }
 
     @Override
-    public void onTabUnselected(Tab tab, FragmentTransaction ft) {
+    public void onTabUnselected(Tab tab, @NotNull FragmentTransaction ft) {
         if (mFragment != null) {
             // Detach the fragment, because another one is being attached
             ft.detach(mFragment);

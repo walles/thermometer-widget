@@ -6,6 +6,8 @@ import java.util.GregorianCalendar;
 import java.util.TimeZone;
 
 import junit.framework.TestCase;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONObject;
 
 /**
@@ -27,7 +29,9 @@ public class WeatherTest extends TestCase {
         expectedCal.set(2013, Calendar.OCTOBER, 6, 17, 36, 54);
         final SimpleDateFormat FORMATTER = new SimpleDateFormat("yyyy MMM dd hh:mm zz");
         String expectedDateString = FORMATTER.format(expectedCal.getTime());
-        String actualDateString = FORMATTER.format(verifyMe.getObservationTime().getTime());
+        Calendar observationTime = verifyMe.getObservationTime();
+        assertNotNull(observationTime);
+        String actualDateString = FORMATTER.format(observationTime.getTime());
         assertEquals(expectedDateString, actualDateString);
 
         assertEquals(5.90, verifyMe.getWindKnots(), 0.02);
@@ -96,6 +100,7 @@ public class WeatherTest extends TestCase {
         }
     }
 
+    @NotNull
     private Weather createWeather(String name, int centigrades, int windMps) throws Exception {
         JSONObject main = new JSONObject();
         main.put("temp", centigrades + 273.15);
@@ -111,7 +116,8 @@ public class WeatherTest extends TestCase {
         return new Weather(weather);
     }
 
-    private Weather createWeatherWithTemperatureString(String temperatureString) throws Exception {
+    @NotNull
+    private Weather createWeatherWithTemperatureString(@Nullable String temperatureString) throws Exception {
         JSONObject main = new JSONObject();
         if (temperatureString != null) {
             main.put("temp", temperatureString);

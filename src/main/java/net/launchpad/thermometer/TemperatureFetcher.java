@@ -29,6 +29,8 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.Locale;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -73,7 +75,8 @@ public class TemperatureFetcher extends Thread implements Callback {
         this.widgetManager = widgetManager;
     }
 
-    static String censorAppid(String urlWithAppid) {
+    @NotNull
+    static String censorAppid(@NotNull String urlWithAppid) {
         int appIdIndex = urlWithAppid.indexOf("APPID=");
         if (appIdIndex < 0) {
             return urlWithAppid;
@@ -93,6 +96,7 @@ public class TemperatureFetcher extends Thread implements Callback {
      *
      * @return Information from the nearest weather station, or null.
      */
+    @Nullable
     Weather fetchWeather(double latitude, double longitude) {
         long minutesToNextFetch;
         synchronized (this) {
@@ -230,7 +234,8 @@ public class TemperatureFetcher extends Thread implements Callback {
      *
      * @throws IOException if downloading data from the URL fails.
      */
-    private String fetchUrl(URL url) throws IOException {
+    @NotNull
+    private String fetchUrl(@NotNull URL url) throws IOException {
         Log.d(TAG, "Fetching data from: " + censorAppid(url.toString()));
         widgetManager.setStatus("Downloading weather data...");
 
@@ -280,7 +285,11 @@ public class TemperatureFetcher extends Thread implements Callback {
      */
     public void fetchTemperature(double latitude, double longitude) {
         Message message = Message.obtain();
+        assert message != null;
+
         Bundle bundle = message.getData();
+        assert bundle != null;
+
         bundle.putDouble("latitude", latitude);
         bundle.putDouble("longitude", longitude);
 
@@ -303,7 +312,7 @@ public class TemperatureFetcher extends Thread implements Callback {
     }
 
     @Override
-    public boolean handleMessage(Message message) {
+    public boolean handleMessage(@NotNull Message message) {
         Log.d(TAG, "Fetcher got temperature request...");
         Bundle extras = message.peekData();
         if (extras == null) {
