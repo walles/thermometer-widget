@@ -71,8 +71,10 @@ public class ThermometerConfigure extends PreferenceFragment {
         temperatureUnits.setSummary(temperatureUnits.getValue());
         temperatureUnits.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
             @Override
-            public boolean onPreferenceChange(@NotNull Preference preference, @NotNull Object value) {
-                preference.setSummary(value.toString());
+            public boolean onPreferenceChange(@NotNull Preference temperaturePreference, @NotNull Object value) {
+                Log.d(TAG, String.format("Temperature unit set to: %s", value));
+
+                temperaturePreference.setSummary(value.toString());
 
                 // true == accept the new value
                 return true;
@@ -156,11 +158,11 @@ public class ThermometerConfigure extends PreferenceFragment {
                         .putInt(colorPreference.getKey(), color)
                         .commit();
         if (!colorUpdated) {
-            Log.e(TAG, "Failed to commit color preference change");
+            Log.e(TAG, String.format("Failed to commit color preference change: 0x%06x", color));
             return;
         }
-
         Log.d(TAG, String.format("New color picked: 0x%06x", color));
+
         setColorPreferenceSummary(color);
     }
 }
