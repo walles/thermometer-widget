@@ -1,4 +1,5 @@
 ./src/main/res/drawable-*/icon.png
+./graphics/thermometer-face.png
 ./graphics/market-icon.png
 ./src/main/java/net/launchpad/thermometer/Constants.java
 ./local.properties

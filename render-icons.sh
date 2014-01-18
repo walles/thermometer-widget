@@ -9,12 +9,29 @@ set -e
 
 MYDIR=$(cd $(dirname "$0") ; pwd)
 
-# This works for OSX
+# This works on OSX
+INKSCAPE=$(mdfind 'kMDItemFSName = Inkscape.app && kMDItemKind = Program')/Contents/Resources/bin/inkscape
+if [ ! -x $INKSCAPE ] ; then
+    echo ERROR: Inkscape not found, please install Inkscape
+    exit 1
+fi
+
+# This works on OSX
 BLENDER=$(mdfind 'kMDItemFSName = blender.app && kMDItemKind = Program')/Contents/MacOS/blender
+if [ ! -x $BLENDER ] ; then
+    echo ERROR: Blender not found, please install Blender
+    exit 1
+fi
+
+# Required on Johan's machine...
+unset PYTHONPATH
 
 cd $MYDIR/graphics
 
 echo $(date): Rendering icons...
+
+$INKSCAPE --export-png=thermometer-face.png --export-area-drawing thermometer-face.svg
+
 
 mkdir -p $MYDIR/src/main/res/drawable-mdpi
 $BLENDER -b logo.blend --scene mdpi -o /tmp/mdpi -F PNG -x 1 -f 1
