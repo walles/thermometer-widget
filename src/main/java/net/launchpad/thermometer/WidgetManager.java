@@ -20,6 +20,10 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -101,12 +105,58 @@ public class WidgetManager extends Service {
      */
     private TemperatureFetcher temperatureFetcher;
 
+    private Process logcat;
+
     /**
      * Create a new widget manager.
      */
     public WidgetManager() {
         temperatureFetcher = new TemperatureFetcher(this);
         temperatureFetcher.start();
+    }
+
+    /**
+     * Ask logcat to start storing logs to disk in the background.
+     * <p>
+     * Note that the log files will be read by
+     * {@link net.launchpad.thermometer.ThermometerLogViewer.ReadLogsTask#getStoredLogs()},
+     * so if this method changes, that one needs to change as well.
+     */
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        File logdir = getDir("logs", MODE_PRIVATE);
+        File logfile = new File(logdir, "log");
+
+        // Print a banner to the current log file so the restart can be easily spotted
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter(new FileWriter(logfile));
+            writer.println();
+            writer.println("--- Launching the Thermometer Widget ---");
+            writer.println();
+        } catch (IOException e) {
+            Log.w(TAG, "Writing restarting banner to log file failed: " + logfile.getAbsolutePath(), e);
+        } finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+
+        try {
+            logcat = Runtime.getRuntime().exec(new String[] {
+                    "logcat",
+                    "-v", "time",
+                    "-f", logfile.getAbsolutePath(),
+                    "-n", "3",
+                    "-r", "16"
+            });
+
+            Log.i(TAG, "Background logcat started, logging into " + logdir);
+        } catch (IOException e) {
+            Log.e(TAG, "Executing logcat failed", e);
+        }
     }
 
     public synchronized SharedPreferences getPreferences() {
@@ -568,5 +618,17 @@ public class WidgetManager extends Service {
 
         // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
         return START_STICKY;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+
+        if (logcat != null) {
+            logcat.destroy();
+            logcat = null;
+
+            Log.i(TAG, "Background logcat stopped");
+        }
     }
 }

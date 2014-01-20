@@ -25,6 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -32,6 +33,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Shows the Thermometer Widget logs.
@@ -42,15 +46,8 @@ public class ThermometerLogViewer extends Fragment {
     private ScrollView verticalScrollView;
 
     private class ReadLogsTask extends AsyncTask<Void, Void, CharSequence> {
-        @NotNull
-        @Override
-        protected CharSequence doInBackground(Void... voids) {
-            long t0 = System.currentTimeMillis();
-
+        private @NotNull CharSequence getCurrentLogs() {
             StringBuilder builder = new StringBuilder();
-            builder.append("Device description:\n");
-            builder.append(getDeviceDescription());
-            builder.append('\n');
 
             Process process;
             try {
@@ -81,8 +78,91 @@ public class ThermometerLogViewer extends Fragment {
                 }
             }
 
+            return builder;
+        }
+
+        /**
+         * Read logs stored on disk.
+         * <p>
+         * Note that this method needs to read the logs produced by logcat started at {@link WidgetManager#onCreate()},
+         * so if that method changes, this one needs to change as well.
+         *
+         * @return The log file contents
+         */
+        private @NotNull CharSequence getStoredLogs() {
+            Activity activity = getActivity();
+            assert activity != null;
+
+            File logdir = getActivity().getDir("logs", Activity.MODE_PRIVATE);
+            File[] files = logdir.listFiles();
+            assert files != null;
+
+            List<File> logfiles = new ArrayList<File>();
+            for (File file : files) {
+                if (!file.isFile()) {
+                    continue;
+                }
+
+                if (!file.getName().startsWith("log")) {
+                    continue;
+                }
+
+                logfiles.add(file);
+            }
+
+            Collections.sort(logfiles);
+            Collections.reverse(logfiles);
+
+            StringBuilder builder = new StringBuilder();
+            for (File logfile : logfiles) {
+                builder.append("\n");
+                builder.append(logfile.getAbsolutePath());
+                builder.append(":\n");
+
+                BufferedReader reader = null;
+                try {
+                    reader = new BufferedReader(new FileReader(logfile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        builder.append(line);
+                        builder.append("\n");
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to read " + logfile.getAbsolutePath());
+                    builder.append("Reading file failed: ");
+                    builder.append(e.getMessage());
+                    builder.append("\n");
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException e) {
+                            Log.w(TAG, "Closing log file reader failed: " + logfile.getAbsolutePath(), e);
+                        }
+                    }
+                }
+            }
+
+            return builder;
+        }
+
+        @NotNull
+        @Override
+        protected CharSequence doInBackground(Void... voids) {
+            long t0 = System.currentTimeMillis();
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("Device description:\n");
+            builder.append(getDeviceDescription());
+
+            builder.append(getStoredLogs());
+
+            builder.append("\n");
+            builder.append("Current logs:\n");
+            builder.append(getCurrentLogs());
+
             long t1 = System.currentTimeMillis();
-            Log.d(TAG, String.format("Reading the log files took %dms", t1 - t0));
+            Log.d(TAG, String.format("Reading all logs took %dms", t1 - t0));
 
             return builder;
         }
