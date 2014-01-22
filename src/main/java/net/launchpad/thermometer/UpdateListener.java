@@ -166,6 +166,7 @@ implements LocationListener, Closeable {
 
         if (ageMinutes > 60) {
             triggerLocationUpdate("too old");
+            Log.w(TAG, "Android bug 57707, rebooting should help: https://code.google.com/p/android/issues/detail?id=57707");
         }
 
         return bestLocation;
