@@ -186,7 +186,8 @@ implements LocationListener, Closeable {
         locationManager.requestLocationUpdates(
                 LocationManager.NETWORK_PROVIDER,
                 41 * 60 * 1000, // Drift a bit relative to the periodic widget update
-                50000, // Every 50km we move
+                0, // We'll just rely on time; we update seldom enough for updating-too-frequently not to be a power
+                   // drain.
                 this);
         Log.d(TAG, "Location listener registered");
     }
