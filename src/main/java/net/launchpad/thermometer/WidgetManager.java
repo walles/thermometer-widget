@@ -326,7 +326,6 @@ public class WidgetManager extends Service {
         }
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
-            setStatus("Locating phone...");
             setWeather(null);
             return;
         }

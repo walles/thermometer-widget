@@ -20,21 +20,21 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
-import android.os.Looper;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import net.launchpad.thermometer.WidgetManager.UpdateReason;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.os.Bundle;
 import android.util.Log;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.Closeable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -62,6 +62,9 @@ implements LocationListener, Closeable {
     @NotNull
     private final SharedPreferences.OnSharedPreferenceChangeListener preferenceChangeListener;
 
+    @NotNull
+    private final LocationClient locationClient;
+
     /**
      * Create a new update listener.
      *
@@ -71,7 +74,26 @@ implements LocationListener, Closeable {
     public UpdateListener(@NotNull final WidgetManager widgetManager) {
         this.widgetManager = widgetManager;
 
-        registerLocationListener(widgetManager);
+        widgetManager.setStatus("Location service starting...");
+        locationClient = new LocationClient(widgetManager, new GooglePlayServicesClient.ConnectionCallbacks() {
+            @Override
+            public void onConnected(Bundle bundle) {
+                registerLocationListener(widgetManager);
+            }
+
+            @Override
+            public void onDisconnected() {
+                Log.i(TAG, "Disconnected from location service");
+                widgetManager.setStatus("Location service disconnected");
+            }
+        }, new GooglePlayServicesClient.OnConnectionFailedListener() {
+            @Override
+            public void onConnectionFailed(ConnectionResult connectionResult) {
+                Log.e(TAG, "Failed connecting to location service: " + connectionResult);
+                widgetManager.setStatus("Location service error " + connectionResult.getErrorCode());
+            }
+        });
+        locationClient.connect();
 
         Log.d(TAG, "Registering preferences change notification listener");
 
@@ -92,20 +114,6 @@ implements LocationListener, Closeable {
         widgetManager.getPreferences().registerOnSharedPreferenceChangeListener(preferenceChangeListener);
     }
 
-    private void triggerLocationUpdate(String issue) {
-        Log.w(TAG, "Location " + issue + ", triggering update...");
-
-        Looper looper = Looper.myLooper();
-        if (looper == null) {
-            Log.e(TAG, "Have no looper, can't trigger location update");
-            return;
-        }
-        getLocationManager().requestSingleUpdate(
-                LocationManager.NETWORK_PROVIDER,
-                this,
-                looper);
-    }
-
     /**
      * Get the phone's last known location.
      *
@@ -115,13 +123,11 @@ implements LocationListener, Closeable {
     public Location getLocation() {
         Location bestLocation;
 
-        LocationManager locationManager = getLocationManager();
         Location lastKnownLocation = null;
-        if (networkLocationAvailable()) {
-            lastKnownLocation =
-                    locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        if (locationClient.isConnected()) {
+            lastKnownLocation = locationClient.getLastLocation();
         } else {
-            Log.w(TAG, "Network positioning not available on this device");
+            Log.w(TAG, "Location client not connected");
         }
 
         if (lastKnownLocation == null && cachedLocation == null) {
@@ -153,69 +159,30 @@ implements LocationListener, Closeable {
 
         if (bestLocation == null) {
             Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
-            triggerLocationUpdate("unknown");
 
             return null;
         }
 
         long ageMs = System.currentTimeMillis() - bestLocation.getTime();
         int ageMinutes = (int)(ageMs / (60 * 1000));
-        Log.d(TAG, String.format("Got a %s location from %s",
+        Log.d(TAG, String.format("Got a %s location from %s, accuracy=%dm",
                 Util.minutesToTimeOldString(ageMinutes),
-                bestLocation.getProvider()));
-
-        if (ageMinutes > 60) {
-            triggerLocationUpdate("too old");
-            Log.w(TAG, "Android bug 57707, rebooting should help: https://code.google.com/p/android/issues/detail?id=57707");
-        }
+                bestLocation.getProvider(),
+                Math.round(bestLocation.getAccuracy())));
 
         return bestLocation;
     }
 
     private void registerLocationListener(@NotNull WidgetManager widgetManager) {
         Log.d(TAG, "Registering location listener...");
-        LocationManager locationManager = getLocationManager();
 
-        if (!networkLocationAvailable()) {
-            widgetManager.setStatus("Network position not available on device");
-            Log.e(TAG, "Network positioning not available on this device");
-
-            return;
-        }
+        LocationRequest locationRequest = new LocationRequest();
+        locationRequest.setInterval(41 * 60 * 1000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER);
+        locationClient.requestLocationUpdates(locationRequest, this);
 
         widgetManager.setStatus("Locating phone...");
-        locationManager.requestLocationUpdates(
-                LocationManager.NETWORK_PROVIDER,
-                41 * 60 * 1000, // Drift a bit relative to the periodic widget update
-                0, // We'll just rely on time; we update seldom enough for updating-too-frequently not to be a power
-                   // drain.
-                this);
         Log.d(TAG, "Location listener registered");
-    }
-
-    private boolean networkLocationAvailable() {
-        LocationManager locationManager = getLocationManager();
-
-        List<String> allProviders = locationManager.getAllProviders();
-        return allProviders.contains(LocationManager.NETWORK_PROVIDER);
-    }
-
-    /**
-     * Get a non-null location manager.
-     *
-     * @return A non-null location manager.
-     *
-     * @throws RuntimeException if the location manager cannot be found.
-     */
-    @NotNull
-    private LocationManager getLocationManager() {
-        LocationManager locationManager =
-            (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
-        if (locationManager == null) {
-            widgetManager.setStatus("Location unavailable");
-            throw new RuntimeException("Location manager not found, cannot continue");
-        }
-        return locationManager;
     }
 
     private String describePreference(@NotNull SharedPreferences preferences, String key) {
@@ -245,73 +212,47 @@ implements LocationListener, Closeable {
 
         Log.d(TAG, "Deregistering preferences change listener...");
         widgetManager.getPreferences().unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
-        getLocationManager().removeUpdates(this);
+        locationClient.disconnect();
     }
 
     @Override
-    public void onLocationChanged(@NotNull Location networkLocation) {
-        Log.d(TAG, String.format("Location updated to lat=%.4f, lon=%.4f",
-            networkLocation.getLatitude(),
-            networkLocation.getLongitude()));
+    public void onLocationChanged(@NotNull Location location) {
+        long locationAgeMillis = System.currentTimeMillis() - location.getTime();
+        long locationAgeMinutes = locationAgeMillis / (1000 * 60);
+        Log.d(TAG, String.format("Location updated to lat=%.4f, lon=%.4f, accuracy=%dm, age=%s",
+                location.getLatitude(),
+                location.getLongitude(),
+                Math.round(location.getAccuracy()),
+                Util.minutesToTimeOldString((int)locationAgeMinutes)));
+
+        if (cachedLocation == null) {
+            cachedLocation = location;
+            widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
+            return;
+        }
+
+        if (cachedLocation.getTime() > location.getTime()) {
+            long ageDifferenceSeconds = (cachedLocation.getTime() - location.getTime()) / 1000L;
+            Log.i(TAG, String.format("Cached location is %ds newer than location update, ignoring location update",
+                    ageDifferenceSeconds));
+            return;
+        }
 
         try {
-            if (cachedLocation != null) {
-                int lastLocationAgeMinutes =
-                        (int)((System.currentTimeMillis() - cachedLocation.getTime())
-                                / (1000L * 60L));
+            int cachedLocationAgeMinutes =
+                    (int)((System.currentTimeMillis() - cachedLocation.getTime())
+                            / (1000L * 60L));
 
-                if (lastLocationAgeMinutes < 10) {
-                    Log.i(TAG, String.format("Not updating widget; old location %s",
-                            Util.minutesToTimeOldString(lastLocationAgeMinutes)));
-                    return;
-                }
+            if (cachedLocationAgeMinutes < 10) {
+                Log.i(TAG, String.format("Not updating widget; old location %s",
+                        Util.minutesToTimeOldString(cachedLocationAgeMinutes)));
+                return;
             }
         } finally {
-            cachedLocation = networkLocation;
+            cachedLocation = location;
         }
 
         // Take a new measurement at our new location
         widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
-            Log.e(TAG, "Location provider disabled: " + provider);
-            widgetManager.setStatus("Click to enable network positioning");
-        }
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-        if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
-            Log.i(TAG, "Location provider enabled: " + provider);
-            widgetManager.setStatus("Locating phone...");
-        }
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        if (LocationManager.NETWORK_PROVIDER.equals(provider)) {
-            switch (status) {
-            case LocationProvider.AVAILABLE:
-                Log.d(TAG, "Location provider available: " + provider);
-                break;
-            case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                Log.w(TAG, "Location provider temporarily unavailable: "
-                    + provider);
-                break;
-            case LocationProvider.OUT_OF_SERVICE:
-                Log.e(TAG, "Location provider out of service: "
-                    + provider);
-                widgetManager.setStatus("Location services unavailable");
-                break;
-            default:
-                Log.w(TAG, "Location provider switched to unknown status "
-                    + status
-                    + ": "
-                    + provider);
-            }
-        }
     }
 }

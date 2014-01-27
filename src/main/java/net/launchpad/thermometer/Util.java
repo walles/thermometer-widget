@@ -22,6 +22,10 @@ public final class Util {
      */
     @NotNull
     public static String minutesToTimeOldString(int ageMinutes) {
+        if (ageMinutes < -1) {
+            return -ageMinutes + " minutes future";
+        }
+
         if (ageMinutes <= 1) {
             return "current";
         }
