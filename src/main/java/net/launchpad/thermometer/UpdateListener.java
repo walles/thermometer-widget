@@ -165,9 +165,11 @@ implements LocationListener, Closeable {
 
         long ageMs = System.currentTimeMillis() - bestLocation.getTime();
         int ageMinutes = (int)(ageMs / (60 * 1000));
-        Log.d(TAG, String.format("Got a %s location from %s, accuracy=%dm",
+        Log.d(TAG, String.format("Got a %s location from %s, lat=%f, lon=%f, accuracy=%dm",
                 Util.minutesToTimeOldString(ageMinutes),
                 bestLocation.getProvider(),
+                bestLocation.getLatitude(),
+                bestLocation.getLongitude(),
                 Math.round(bestLocation.getAccuracy())));
 
         return bestLocation;
