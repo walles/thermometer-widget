@@ -55,11 +55,6 @@ import org.jetbrains.annotations.Nullable;
  */
 public class WidgetManager extends Service {
     /**
-     * We don't want to show weather observations older than this.
-     */
-    private static final int MAX_WEATHER_AGE_MINUTES = 150;
-
-    /**
      * Used for tagging update intents with why they were sent.
      */
     private final static String UPDATE_REASON = "Update Reason";
@@ -219,27 +214,6 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Return a String representing the given time of day (hours and minutes)
-     * according to the user's system settings.
-     *
-     * @param time A time of day.
-     *
-     * @return Either "15:42" or "3:42PM".
-     */
-    @NotNull
-    private CharSequence toHoursString(@NotNull Calendar time) {
-        String format;
-
-        if (DateFormat.is24HourFormat(this)) {
-            format = "kk:mm";
-        } else {
-            format = "h:mma";
-        }
-
-        return DateFormat.format(format, time);
-    }
-
-    /**
      * How are we doing on fetching the weather?
      *
      * @param status A status string.
@@ -248,7 +222,7 @@ public class WidgetManager extends Service {
         synchronized (weatherLock) {
             Calendar now = new GregorianCalendar();
 
-            this.status =  toHoursString(now) + " " + status;
+            this.status =  Util.toHoursString(now, DateFormat.is24HourFormat(this)) + " " + status;
 
             Log.i(TAG, "Set user visible status: " + status);
 
@@ -373,74 +347,24 @@ public class WidgetManager extends Service {
         Log.d(TAG, "Updating widget display...");
         Weather weatherObservation = getWeather();
 
-        boolean windChillComputed = false;
-
-        String degrees = "--";
-        String metadata = getStatus();
-        if (weatherObservation != null) {
-            Log.d(TAG, "Weather data is " + weatherObservation);
-
-            if (getPreferences().getBoolean("showMetadataPref", false)) {
-                Calendar observationTime = weatherObservation.getObservationTime();
-                if (observationTime != null) {
-                    metadata =
-                            toHoursString(observationTime).toString();
-                } else {
-                    metadata = "";
-                }
-
-                if (weatherObservation.getStationName() != null) {
-                    if (!metadata.isEmpty()) {
-                        metadata += " ";
-                    }
-                    metadata += weatherObservation.getStationName();
-                }
-                if (weatherObservation.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
-                    // Present excuses for our old data
-                    metadata = getStatus();
-                }
-            } else {
-                metadata = "";
-            }
-
-            boolean withWindChill =
-                getPreferences().getBoolean("windChillPref", false);
-            boolean inFarenheit =
-                "Farenheit".equals(getPreferences().getString("temperatureUnitPref", "Celsius"));
-
-            int unchilledDegrees;
-            int chilledDegrees;
-            if (inFarenheit) {
-                // Liberian users and some others
-                chilledDegrees = weatherObservation.getFarenheit(withWindChill);
-                unchilledDegrees = weatherObservation.getFarenheit(false);
-            } else {
-                chilledDegrees = weatherObservation.getCentigrades(withWindChill);
-                unchilledDegrees = weatherObservation.getCentigrades(false);
-            }
-            degrees = Integer.toString(chilledDegrees);
-            windChillComputed = (chilledDegrees != unchilledDegrees);
-        }
+        WeatherPresenter weatherPresenter = new WeatherPresenter(getWeather(), getStatus());
+        weatherPresenter.setShowMetadata(getPreferences().getBoolean("showMetadataPref", false));
+        weatherPresenter.setWithWindChill(getPreferences().getBoolean("windChillPref", false));
+        weatherPresenter.setUseCelsius(!"Farenheit".equals(getPreferences().getString("temperatureUnitPref", "Celsius")));
+        weatherPresenter.setUse24HoursFormat(DateFormat.is24HourFormat(this));
 
         // Publish the fetched temperature
         RemoteViews remoteViews =
             new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                 R.layout.main);
 
-        String temperatureString;
-        if (windChillComputed) {
-            temperatureString = degrees + "*";
-        } else {
-            temperatureString = degrees + "°";
-        }
-
-        Log.d(TAG, "Displaying temperature: <" + temperatureString + ">");
-        remoteViews.setTextViewText(R.id.TemperatureView, temperatureString);
+        Log.d(TAG, "Displaying temperature: <" + weatherPresenter.getTemperatureString() + ">");
+        remoteViews.setTextViewText(R.id.TemperatureView, weatherPresenter.getTemperatureString());
         remoteViews.setTextColor(R.id.TemperatureView,
             getPreferences().getInt("textColorPref", Color.WHITE));
 
-        Log.d(TAG, "Displaying metadata: <" + metadata + ">");
-        remoteViews.setTextViewText(R.id.MetadataView, metadata);
+        Log.d(TAG, "Displaying metadata: <" + weatherPresenter.getSubtextString() + ">");
+        remoteViews.setTextViewText(R.id.MetadataView, weatherPresenter.getSubtextString());
         remoteViews.setTextColor(R.id.MetadataView,
             getPreferences().getInt("textColorPref", Color.WHITE));
 

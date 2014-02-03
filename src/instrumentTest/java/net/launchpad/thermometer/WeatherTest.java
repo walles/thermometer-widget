@@ -101,7 +101,12 @@ public class WeatherTest extends TestCase {
     }
 
     @NotNull
-    private Weather createWeather(String name, int centigrades, int windMps) throws Exception {
+    static Weather createWeather(String name, int centigrades, int windMps) throws Exception {
+        return createWeather(name, centigrades, windMps, System.currentTimeMillis());
+    }
+
+    @NotNull
+    static Weather createWeather(String name, int centigrades, int windMps, long timestamp) throws Exception {
         JSONObject main = new JSONObject();
         main.put("temp", centigrades + 273.15);
 
@@ -112,6 +117,7 @@ public class WeatherTest extends TestCase {
         weather.put("main", main);
         weather.put("wind", wind);
         weather.put("name", name);
+        weather.put("dt", timestamp / 1000L);
 
         return new Weather(weather);
     }

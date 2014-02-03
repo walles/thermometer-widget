@@ -1,7 +1,10 @@
 package net.launchpad.thermometer;
 
 import android.os.Build;
+import android.text.format.DateFormat;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Calendar;
 
 public final class Util {
     /**
@@ -51,6 +54,27 @@ public final class Util {
         }
 
         return ((int)(ageMinutes / (60 * 24 * 365.25))) + " years old";
+    }
+
+    /**
+     * Return a String representing the given time of day (hours and minutes)
+     * according to the user's system settings.
+     *
+     * @param time A time of day.
+     *
+     * @return Either "15:42" or "3:42PM".
+     */
+    @NotNull
+    public static CharSequence toHoursString(@NotNull Calendar time, boolean is24HourFormat) {
+        String format;
+
+        if (is24HourFormat) {
+            format = "kk:mm";
+        } else {
+            format = "h:mma";
+        }
+
+        return DateFormat.format(format, time);
     }
 
     /**
