@@ -345,7 +345,6 @@ public class WidgetManager extends Service {
      */
     public void updateUi() {
         Log.d(TAG, "Updating widget display...");
-        Weather weatherObservation = getWeather();
 
         WeatherPresenter weatherPresenter = new WeatherPresenter(getWeather(), getStatus());
         weatherPresenter.setShowMetadata(getPreferences().getBoolean("showMetadataPref", false));
@@ -353,20 +352,9 @@ public class WidgetManager extends Service {
         weatherPresenter.setUseCelsius(!"Farenheit".equals(getPreferences().getString("temperatureUnitPref", "Celsius")));
         weatherPresenter.setUse24HoursFormat(DateFormat.is24HourFormat(this));
 
-        // Publish the fetched temperature
+        int textColor = getPreferences().getInt("textColorPref", Color.WHITE);
         RemoteViews remoteViews =
-            new RemoteViews(ThermometerWidget.class.getPackage().getName(),
-                R.layout.main);
-
-        Log.d(TAG, "Displaying temperature: <" + weatherPresenter.getTemperatureString() + ">");
-        remoteViews.setTextViewText(R.id.TemperatureView, weatherPresenter.getTemperatureString());
-        remoteViews.setTextColor(R.id.TemperatureView,
-            getPreferences().getInt("textColorPref", Color.WHITE));
-
-        Log.d(TAG, "Displaying metadata: <" + weatherPresenter.getSubtextString() + ">");
-        remoteViews.setTextViewText(R.id.MetadataView, weatherPresenter.getSubtextString());
-        remoteViews.setTextColor(R.id.MetadataView,
-            getPreferences().getInt("textColorPref", Color.WHITE));
+                weatherPresenter.createRemoteViews(textColor);
 
         Intent intent;
         if (isPositioningEnabled() || Util.isRunningOnEmulator()) {

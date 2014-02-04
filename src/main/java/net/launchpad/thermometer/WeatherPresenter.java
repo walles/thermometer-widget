@@ -1,6 +1,7 @@
 package net.launchpad.thermometer;
 
 import android.util.Log;
+import android.widget.RemoteViews;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,6 +64,30 @@ public class WeatherPresenter {
     public void setWithWindChill(boolean withWindChill) {
         this.withWindChill = withWindChill;
         updateStrings();
+    }
+
+    /**
+     * Create a RemoteViews instance with the temperature string and the subtext string.
+     *
+     * @param color The text color to use for the RemoteViews
+     *
+     * @return A rendering of the temperature string and the subtext string.
+     */
+    @NotNull
+    public RemoteViews createRemoteViews(int color) {
+        RemoteViews remoteViews =
+                new RemoteViews(ThermometerWidget.class.getPackage().getName(),
+                        R.layout.main);
+
+        Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
+        remoteViews.setTextViewText(R.id.TemperatureView, getTemperatureString());
+        remoteViews.setTextColor(R.id.TemperatureView, color);
+
+        Log.d(TAG, "Displaying subtext: <" + getSubtextString() + ">");
+        remoteViews.setTextViewText(R.id.MetadataView, getSubtextString());
+        remoteViews.setTextColor(R.id.MetadataView, color);
+
+        return remoteViews;
     }
 
     private void updateStrings() {
