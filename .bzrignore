@@ -11,3 +11,4 @@
 ./graphics/logo.blend?
 *.iml
 ./.idea
+.DS_Store
