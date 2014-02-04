@@ -22,7 +22,7 @@ public class WeatherTest extends TestCase {
         JSONObject parseMe = new JSONObject("{\"coord\":{\"lon\":139,\"lat\":35},\"sys\":{\"country\":\"JP\",\"sunrise\":1381005770,\"sunset\":1381047672},\"weather\":[{\"id\":500,\"main\":\"Rain\",\"description\":\"light rain\",\"icon\":\"10n\"}],\"base\":\"gdps stations\",\"main\":{\"temp\":293.717,\"temp_min\":293.717,\"temp_max\":293.717,\"pressure\":1010.22,\"sea_level\":1035.21,\"grnd_level\":1010.22,\"humidity\":100},\"wind\":{\"speed\":3.04,\"deg\":49.0001},\"rain\":{\"3h\":2},\"clouds\":{\"all\":92},\"dt\":1381081014,\"id\":1848899,\"name\":\"Warabo\",\"cod\":200}");
         Weather verifyMe = new Weather(parseMe);
         assertEquals(21, verifyMe.getCentigrades(false));
-        assertEquals(69, verifyMe.getFarenheit(false));
+        assertEquals(69, verifyMe.getFahrenheit(false));
         assertEquals("Warabo", verifyMe.getStationName());
 
         Calendar expectedCal = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
@@ -59,13 +59,13 @@ public class WeatherTest extends TestCase {
     }
 
     /**
-     * Validate {@link Weather#getFarenheit(boolean)}.
+     * Validate {@link Weather#getFahrenheit(boolean)}.
      *
      * @throws Exception when testing goes exceptionally bad
      */
-    public void testGetFarenheit() throws Exception {
-        assertEquals(41, createWeather("Foo", 5, 0).getFarenheit(false));
-        assertEquals(23, createWeather("Foo", -5, 0).getFarenheit(false));
+    public void testGetFahrenheit() throws Exception {
+        assertEquals(41, createWeather("Foo", 5, 0).getFahrenheit(false));
+        assertEquals(23, createWeather("Foo", -5, 0).getFahrenheit(false));
     }
 
     /**

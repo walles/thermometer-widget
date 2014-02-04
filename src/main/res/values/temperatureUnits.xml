@@ -2,6 +2,6 @@
 <resources>
 <string-array name="temperatureUnits">
    <item>Celsius</item>
-   <item>Farenheit</item>
+   <item>Fahrenheit</item>
 </string-array>
 </resources>

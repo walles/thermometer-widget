@@ -285,22 +285,22 @@ public class Weather {
     }
 
     /**
-     * Get the temperature in Farenheit.
+     * Get the temperature in Fahrenheit.
      *
      * @param correctForWindChill True to get a value corrected for wind chill.
      * False otherwise.
      *
-     * @return The temperature in farenheit.
+     * @return The temperature in fahrenheit.
      */
-    public int getFarenheit(boolean correctForWindChill) {
+    public int getFahrenheit(boolean correctForWindChill) {
         double convertMe = centigrades;
 
         if (correctForWindChill) {
             convertMe = getWindChilledCentigrades();
         }
 
-        double farenheit = convertMe * 9.0 / 5.0 + 32.0;
-        return (int)Math.round(farenheit);
+        double fahrenheit = convertMe * 9.0 / 5.0 + 32.0;
+        return (int)Math.round(fahrenheit);
     }
 
     /**

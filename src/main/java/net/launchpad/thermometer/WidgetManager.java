@@ -349,7 +349,7 @@ public class WidgetManager extends Service {
         WeatherPresenter weatherPresenter = new WeatherPresenter(getWeather(), getStatus());
         weatherPresenter.setShowMetadata(getPreferences().getBoolean("showMetadataPref", false));
         weatherPresenter.setWithWindChill(getPreferences().getBoolean("windChillPref", false));
-        weatherPresenter.setUseCelsius(!"Farenheit".equals(getPreferences().getString("temperatureUnitPref", "Celsius")));
+        weatherPresenter.setUseCelsius(!Util.isFahrenheit(getPreferences().getString("temperatureUnitPref", "Celsius")));
         weatherPresenter.setUse24HoursFormat(DateFormat.is24HourFormat(this));
 
         int textColor = getPreferences().getInt("textColorPref", Color.WHITE);

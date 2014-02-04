@@ -95,4 +95,17 @@ public final class Util {
 
         return false;
     }
+
+    public static boolean isFahrenheit(@NotNull String possiblyFahrenheit) {
+        if ("Fahrenheit".equals(possiblyFahrenheit)) {
+            return true;
+        }
+
+        // We used to have this mis-spelled
+        if ("Farenheit".equals(possiblyFahrenheit)) {
+            return true;
+        }
+
+        return false;
+    }
 }

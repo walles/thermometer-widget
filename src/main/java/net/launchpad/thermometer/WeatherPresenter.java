@@ -128,8 +128,8 @@ public class WeatherPresenter {
                 unchilledDegrees = weather.getCentigrades(false);
             } else {
                 // Liberian users and some others
-                chilledDegrees = weather.getFarenheit(withWindChill);
-                unchilledDegrees = weather.getFarenheit(false);
+                chilledDegrees = weather.getFahrenheit(withWindChill);
+                unchilledDegrees = weather.getFahrenheit(false);
             }
             degrees = Integer.toString(chilledDegrees);
             windChillComputed = (chilledDegrees != unchilledDegrees);
