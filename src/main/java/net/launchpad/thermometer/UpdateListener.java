@@ -43,8 +43,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Closeable;
 import java.util.Map;
 
-// FIXME: Whose responsibility is it to ask the user to enable network positioning if it isn't already on?
-
 /**
  * Listens for events and requests widget updates as required.
  */
