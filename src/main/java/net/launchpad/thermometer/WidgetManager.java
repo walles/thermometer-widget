@@ -41,7 +41,6 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.RemoteViews;
@@ -100,7 +99,16 @@ public class WidgetManager extends Service {
      */
     private TemperatureFetcher temperatureFetcher;
 
+    /**
+     * This thing puts log messages into files for us.
+     */
     private Process logcat;
+
+    /**
+     * If non-null, we're having problems with the Google Play Services API, and invoking this intent should resolve
+     * them.
+     */
+    private PendingIntent gpsaResolution;
 
     /**
      * Create a new widget manager.
@@ -217,17 +225,41 @@ public class WidgetManager extends Service {
      * How are we doing on fetching the weather?
      *
      * @param status A status string.
+     *
+     * @param gpsaResolution A way to resolve Google Play Services API connection problems
      */
-    public void setStatus(String status) {
+    public void setStatus(@NotNull String status, @Nullable PendingIntent gpsaResolution) {
         synchronized (weatherLock) {
             Calendar now = new GregorianCalendar();
 
-            this.status =  Util.toHoursString(now, DateFormat.is24HourFormat(this)) + " " + status;
-
+            if (gpsaResolution == null) {
+                this.status = Util.toHoursString(now, DateFormat.is24HourFormat(this)) + " " + status;
+            } else {
+                // Google Play Services API problem resolutions are timeless
+                this.status = status;
+            }
             Log.i(TAG, "Set user visible status: " + status);
+
+            this.gpsaResolution = gpsaResolution;
+            Log.i(TAG, "Google Play Services problem resolution is "
+                    + (gpsaResolution == null ? "null" : "non-null"));
 
             // Show the new status to the user
             updateUi();
+        }
+    }
+
+    /**
+     * How are we doing on fetching the weather?
+     *
+     * @param status A status string.
+     */
+    public void setStatus(@NotNull String status) {
+        synchronized (weatherLock) {
+            if (gpsaResolution != null) {
+                Log.w(TAG, "Implicitly nulling out GPSA resolution from: " + this.status);
+            }
+            setStatus(status, null);
         }
     }
 
@@ -256,6 +288,12 @@ public class WidgetManager extends Service {
         return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
     }
 
+    private PendingIntent getGpsaResolution() {
+        synchronized (weatherLock) {
+            return gpsaResolution;
+        }
+    }
+
     /**
      * The reason for a call to {@link WidgetManager#updateMeasurement(UpdateReason)}.
      */
@@ -278,7 +316,12 @@ public class WidgetManager extends Service {
         /**
          * The display needs updating, or the regular-updates timer has expired.
          */
-        DISPLAY_OR_TIMER
+        DISPLAY_OR_TIMER,
+
+        /**
+         * Google Play Services API updated / installed / removed
+         */
+        GPSA_CHANGED
     }
 
     /**
@@ -349,6 +392,7 @@ public class WidgetManager extends Service {
         WeatherPresenter weatherPresenter = new WeatherPresenter(getWeather(), getStatus());
         weatherPresenter.setShowMetadata(getPreferences().getBoolean("showMetadataPref", false));
         weatherPresenter.setWithWindChill(getPreferences().getBoolean("windChillPref", false));
+        weatherPresenter.setForceShowExcuse(getGpsaResolution() != null);
         weatherPresenter.setUseCelsius(!Util.isFahrenheit(getPreferences().getString("temperatureUnitPref", "Celsius")));
         weatherPresenter.setUse24HoursFormat(DateFormat.is24HourFormat(this));
 
@@ -356,20 +400,19 @@ public class WidgetManager extends Service {
         RemoteViews remoteViews =
                 weatherPresenter.createRemoteViews(textColor);
 
-        Intent intent;
-        if (isPositioningEnabled() || Util.isRunningOnEmulator()) {
-            // Tell widget to launch the preferences activity on click
-            intent = new Intent(this, ThermometerActions.class);
+        PendingIntent pendingIntent;
+        PendingIntent resolution = getGpsaResolution();
+        if (resolution != null) {
+            pendingIntent = resolution;
         } else {
-            // Don't know where we are, launch positioning settings on click
-            intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            // All is well, tell widget to launch the preferences activity on click
+            Intent intent = new Intent(this, ThermometerActions.class);
+            pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         }
-        PendingIntent pendingIntent =
-            PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         remoteViews.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
 
         AppWidgetManager appWidgetManager =
-            AppWidgetManager.getInstance(this);
+                AppWidgetManager.getInstance(this);
         assert appWidgetManager != null;
 
         synchronized (weatherLock) {
@@ -436,6 +479,16 @@ public class WidgetManager extends Service {
             Log.w(TAG, "Unsupported update reason: <" + reasonName + ">");
             why = UpdateReason.UNKNOWN;
         }
+
+        if (why == UpdateReason.GPSA_CHANGED) {
+            if (updateListener != null) {
+                updateListener.reconnectGpsa();
+            } else {
+                Log.i(TAG, "Ignoring Google Play Services API change");
+            }
+            return;
+        }
+
         updateMeasurement(why);
     }
 

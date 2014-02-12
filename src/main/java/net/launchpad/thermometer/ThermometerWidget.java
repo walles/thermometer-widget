@@ -18,6 +18,7 @@
 
 package net.launchpad.thermometer;
 
+import android.net.Uri;
 import android.os.Bundle;
 import net.launchpad.thermometer.WidgetManager.UpdateReason;
 import android.appwidget.AppWidgetManager;
@@ -57,6 +58,24 @@ public class ThermometerWidget extends AppWidgetProvider {
             handleWidgetDelete(context, intent);
         } else if (ConnectivityManager.CONNECTIVITY_ACTION.equals(action)) {
             handleConnectivityChange(context);
+        } else if (Intent.ACTION_PACKAGE_ADDED.equals(action)
+                || Intent.ACTION_PACKAGE_REPLACED.equals(action)
+                || Intent.ACTION_PACKAGE_REMOVED.equals(action))
+        {
+            // Update UI on for Google Play Services changes; we need those services for positioning
+            Uri data = intent.getData();
+            if (data == null) {
+                super.onReceive(context, intent);
+                return;
+            }
+
+            String packageName = data.getSchemeSpecificPart();
+            if (!"com.google.android.gms".equals(packageName)) {
+                super.onReceive(context, intent);
+                return;
+            }
+
+            WidgetManager.onUpdate(context, UpdateReason.GPSA_CHANGED);
         } else {
             super.onReceive(context, intent);
         }

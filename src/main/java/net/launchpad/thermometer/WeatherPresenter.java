@@ -24,6 +24,7 @@ public class WeatherPresenter {
     private boolean use24HoursFormat = true;
     private boolean useCelsius = true;
     private boolean withWindChill = false;
+    private boolean forceShowExcuse = false;
 
     /**
      * @param weather The weather to present
@@ -63,6 +64,11 @@ public class WeatherPresenter {
 
     public void setWithWindChill(boolean withWindChill) {
         this.withWindChill = withWindChill;
+        updateStrings();
+    }
+
+    public void setForceShowExcuse(boolean forceShowExcuse) {
+        this.forceShowExcuse = forceShowExcuse;
         updateStrings();
     }
 
@@ -141,6 +147,10 @@ public class WeatherPresenter {
             temperatureString = degrees + "*";
         } else {
             temperatureString = degrees + "°";
+        }
+
+        if (forceShowExcuse) {
+            subtextString = excuse;
         }
     }
 }

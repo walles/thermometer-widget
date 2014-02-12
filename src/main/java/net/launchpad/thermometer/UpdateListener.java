@@ -20,6 +20,10 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
@@ -37,12 +41,19 @@ import org.jetbrains.annotations.Nullable;
 import java.io.Closeable;
 import java.util.Map;
 
+// FIXME: Whose responsibility is it to ask the user to enable network positioning if it isn't already on?
+
 /**
  * Listens for events and requests widget updates as required.
  */
 public class UpdateListener
 implements LocationListener, Closeable {
     private boolean closed = false;
+
+    /**
+     * Notification ID for "Google Play Services need upgrading or installing".
+     */
+    private final static int GPSA_NOTIFICATION = 1;
 
     /**
      * Widget controller.
@@ -78,6 +89,11 @@ implements LocationListener, Closeable {
         locationClient = new LocationClient(widgetManager, new GooglePlayServicesClient.ConnectionCallbacks() {
             @Override
             public void onConnected(Bundle bundle) {
+                Log.i(TAG, "Connected, cancelling GPSA trouble / resolution notification");
+                NotificationManager notificationManager =
+                        (NotificationManager)widgetManager.getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.cancel(GPSA_NOTIFICATION);
+
                 registerLocationListener(widgetManager);
             }
 
@@ -89,14 +105,16 @@ implements LocationListener, Closeable {
         }, new GooglePlayServicesClient.OnConnectionFailedListener() {
             @Override
             public void onConnectionFailed(ConnectionResult connectionResult) {
-                Log.e(TAG, "Failed connecting to location service: " + connectionResult);
-                widgetManager.setStatus("Location service error " + connectionResult.getErrorCode());
+                if (Util.isRunningOnEmulator()) {
+                    Log.i(TAG, "Not resolving GPSA connectivity when running on emulator");
+                } else {
+                    repairGpscConnection(connectionResult);
+                }
             }
         });
         locationClient.connect();
 
         Log.d(TAG, "Registering preferences change notification listener");
-
         preferenceChangeListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
             @Override
             public void onSharedPreferenceChanged(@NotNull SharedPreferences preferences, String key) {
@@ -112,6 +130,39 @@ implements LocationListener, Closeable {
             }
         };
         widgetManager.getPreferences().registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+    }
+
+    /**
+     * Retry connecting to Google Play Services API; this can be useful to do after it has been upgraded on the device.
+     */
+    public void reconnectGpsa() {
+        // FIXME: Should we try disconnecting first if we're already connected?
+
+        if (!locationClient.isConnected()) {
+            locationClient.connect();
+        }
+    }
+
+    private void repairGpscConnection(ConnectionResult problem) {
+        Log.e(TAG, "Failed connecting to location service: " + problem);
+
+        PendingIntent resolution = FixGpsaActivity.createPendingIntent(widgetManager);
+        widgetManager.setStatus("Click to fix location error " + problem.getErrorCode(),
+                resolution);
+
+        Notification.Builder resolutionBuilder = new Notification.Builder(widgetManager);
+        resolutionBuilder.setContentTitle("Upgrade / Install location services");
+        resolutionBuilder.setContentText("Thermometer Widget needs needs location services upgraded or installed");
+        resolutionBuilder.setContentIntent(resolution);
+        resolutionBuilder.setTicker("Thermometer Widget needs to have location services upgraded or installed");
+        resolutionBuilder.setSmallIcon(R.drawable.icon);
+
+        NotificationManager notificationManager =
+                (NotificationManager)widgetManager.getSystemService(Context.NOTIFICATION_SERVICE);
+        // The (deprecated) getNotification() method is the only one available in the oldest Android API we support
+        //noinspection deprecation
+        notificationManager.notify(GPSA_NOTIFICATION, resolutionBuilder.getNotification());
+        Log.i(TAG, "Notifying about GPSA trouble / resolution");
     }
 
     /**
@@ -183,7 +234,7 @@ implements LocationListener, Closeable {
         locationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER);
         locationClient.requestLocationUpdates(locationRequest, this);
 
-        widgetManager.setStatus("Locating phone...");
+        widgetManager.setStatus("Locating phone...", null);
         Log.d(TAG, "Location listener registered");
     }
 

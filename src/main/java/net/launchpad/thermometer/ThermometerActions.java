@@ -13,6 +13,8 @@ import org.jetbrains.annotations.Nullable;
  * Wrapper activity for preferences and log viewing.
  */
 public class ThermometerActions extends Activity {
+    public static final String SHOW_LOGS_EXTRA = "SHOW_LOGS_EXTRA";
+
     @Override
     protected void onSaveInstanceState(@NotNull Bundle outState) {
         ActionBar actionBar = getActionBar();
@@ -46,6 +48,9 @@ public class ThermometerActions extends Activity {
         if (savedInstanceState != null) {
             int selectedTab = savedInstanceState.getInt("selectedTab", 0);
             actionBar.selectTab(actionBar.getTabAt(selectedTab));
+        } else if (getIntent().getBooleanExtra(SHOW_LOGS_EXTRA, false)) {
+            // "1" == the index of the Logs tab
+            actionBar.selectTab(actionBar.getTabAt(1));
         }
     }
 }

@@ -30,7 +30,15 @@
             <intent-filter>
                 <action android:name="android.net.wifi.STATE_CHANGE"/>
             </intent-filter>
+        </receiver>
 
+        <receiver android:name=".ThermometerWidget">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_ADDED"/>
+                <action android:name="android.intent.action.PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
+                <data android:scheme="package"/>
+            </intent-filter>
         </receiver>
 
         <receiver android:name=".ThermometerWidget">
@@ -48,6 +56,10 @@
         </activity>
 
         <service android:name="WidgetManager"/>
+
+        <activity android:name=".FixGpsaActivity"
+                  android:exported="false"
+                  android:theme="@style/Theme.Transparent" />
 
         <meta-data android:name="com.google.android.gms.version"
                    android:value="@integer/google_play_services_version" />
