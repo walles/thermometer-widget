@@ -277,17 +277,6 @@ public class WidgetManager extends Service {
         }
     }
 
-    /**
-     * Is network positioning enabled?
-     *
-     * @return True if network positioning is enabled.  False otherwise.
-     */
-    private boolean isPositioningEnabled() {
-        LocationManager locationManager =
-            (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-    }
-
     private PendingIntent getGpsaResolution() {
         synchronized (weatherLock) {
             return gpsaResolution;

@@ -24,6 +24,8 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.provider.Settings;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
 import com.google.android.gms.location.LocationClient;
@@ -166,6 +168,17 @@ implements LocationListener, Closeable {
     }
 
     /**
+     * Is network positioning enabled?
+     *
+     * @return True if network positioning is enabled.  False otherwise.
+     */
+    private boolean isPositioningEnabled() {
+        LocationManager locationManager =
+                (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
+        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+    }
+
+    /**
      * Get the phone's last known location.
      *
      * @return the phone's last known location.
@@ -208,6 +221,14 @@ implements LocationListener, Closeable {
             bestLocation.setTime(System.currentTimeMillis());
         }
 
+        if (bestLocation == null && !isPositioningEnabled()) {
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            PendingIntent pendingIntent =
+                    PendingIntent.getActivity(widgetManager, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            widgetManager.setStatus("Click to enable network positioning", pendingIntent);
+            return null;
+        }
+
         if (bestLocation == null) {
             Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
 
@@ -223,6 +244,13 @@ implements LocationListener, Closeable {
                 bestLocation.getLongitude(),
                 Math.round(bestLocation.getAccuracy())));
 
+        if (ageMinutes > 150 && !isPositioningEnabled()) {
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            PendingIntent pendingIntent =
+                    PendingIntent.getActivity(widgetManager, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            widgetManager.setStatus("Click to enable network positioning", pendingIntent);
+        }
+
         return bestLocation;
     }
 
@@ -236,6 +264,9 @@ implements LocationListener, Closeable {
 
         widgetManager.setStatus("Locating phone...", null);
         Log.d(TAG, "Location listener registered");
+
+        // This will detect things like positioning services being disabled
+        getLocation();
     }
 
     private String describePreference(@NotNull SharedPreferences preferences, String key) {
