@@ -325,7 +325,7 @@ implements LocationListener, Closeable {
                     (int)((System.currentTimeMillis() - cachedLocation.getTime())
                             / (1000L * 60L));
 
-            if (cachedLocationAgeMinutes < 10) {
+            if (cachedLocationAgeMinutes < 10 && widgetManager.hasWeather()) {
                 Log.i(TAG, String.format("Not updating widget; old location %s",
                         Util.minutesToTimeOldString(cachedLocationAgeMinutes)));
                 return;

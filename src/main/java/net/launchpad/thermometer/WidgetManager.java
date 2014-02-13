@@ -221,6 +221,15 @@ public class WidgetManager extends Service {
     }
 
     /**
+     * Do we know what the weather is like?
+     *
+     * @return True if the weather is known. False otherwise (for a while during startup).
+     */
+    public boolean hasWeather() {
+        return getWeather() != null;
+    }
+
+    /**
      * How are we doing on fetching the weather?
      *
      * @param status A status string.
