@@ -38,7 +38,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.Location;
-import android.location.LocationManager;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
@@ -387,7 +386,7 @@ public class WidgetManager extends Service {
 
         int textColor = getPreferences().getInt("textColorPref", Color.WHITE);
         RemoteViews remoteViews =
-                weatherPresenter.createRemoteViews(textColor);
+                weatherPresenter.createRemoteViews(this, textColor);
 
         PendingIntent pendingIntent;
         PendingIntent resolution = getGpsaResolution();

@@ -1,5 +1,15 @@
 package net.launchpad.thermometer;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Log;
 import android.widget.RemoteViews;
 import org.jetbrains.annotations.NotNull;
@@ -80,18 +90,84 @@ public class WeatherPresenter {
      * @return A rendering of the temperature string and the subtext string.
      */
     @NotNull
-    public RemoteViews createRemoteViews(int color) {
+    public RemoteViews createRemoteViews(Context context, int color) {
         RemoteViews remoteViews =
                 new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                         R.layout.main);
 
-        Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
-        remoteViews.setTextViewText(R.id.TemperatureView, getTemperatureString());
-        remoteViews.setTextColor(R.id.TemperatureView, color);
+        final int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
 
-        Log.d(TAG, "Displaying subtext: <" + getSubtextString() + ">");
-        remoteViews.setTextViewText(R.id.MetadataView, getSubtextString());
-        remoteViews.setTextColor(R.id.MetadataView, color);
+        // The WIDTH needs to be at least as wide as the widget, but I don't know how to get the widget width
+        // (2014feb13). The current formula is based on the fact that you usually get 4x4 widgets on your home screen,
+        // so a quarter of the screen size should be enough.
+        final int WIDTH = screenWidth / 4;
+        //noinspection SuspiciousNameCombination
+        final int HEIGHT = WIDTH;
+        // FIXME: We'd like the following ratio to be 2/3, not 2/3 and a magic constant
+        // FIXME: We should give more room for the subtext if it's forced
+        final int TEMPERATURE_HEIGHT = (HEIGHT * 2) / 3 - 3;
+        float subtextSize = HEIGHT / 6f;
+        Bitmap bitmap =
+                Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        canvas.drawColor(Color.TRANSPARENT);
+
+        // Draw the temperature
+        float textSize = TEMPERATURE_HEIGHT;
+        Paint temperaturePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        temperaturePaint.setTextSize(textSize);
+        temperaturePaint.setTypeface(Typeface.DEFAULT_BOLD);
+        Rect bounds = new Rect();
+        temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
+        float wFactor = WIDTH / (float)bounds.width();
+        float hFactor = TEMPERATURE_HEIGHT / (float)bounds.height();
+        float factor = Math.min(wFactor, hFactor);
+        textSize *= factor;
+        temperaturePaint.setTextSize(textSize);
+        Log.d(TAG, String.format("HEIGHT=%d, TEMPERATURE_HEIGHT=%d, bounds=%dx%d, wFactor=%f, hFactor=%f, factor=%f, textSize=%f",
+                HEIGHT, TEMPERATURE_HEIGHT, bounds.width(), bounds.height(), wFactor, hFactor, factor, textSize));
+
+        temperaturePaint.setColor(color);
+        temperaturePaint.setTextAlign(Paint.Align.CENTER);
+
+        float xPos = canvas.getWidth() / 2f;
+        // This yPos calculation top-aligns the temperature string
+        float yPos = textSize - temperaturePaint.descent();
+        canvas.drawText(getTemperatureString(), xPos, yPos, temperaturePaint);
+
+        // Draw the subtext
+        temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
+        int temperatureBottom = bounds.height();
+        TextPaint subtextPaint = new TextPaint(temperaturePaint);
+        subtextPaint.setTextSize(subtextSize);
+        subtextPaint.setTextAlign(Paint.Align.LEFT);
+        subtextPaint.setTypeface(Typeface.DEFAULT);
+        StaticLayout subtextLayout =
+                new StaticLayout(getSubtextString(), subtextPaint, WIDTH, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
+        float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
+        float subtextFactor = subtextSize / lineHeight;
+        subtextSize *= subtextFactor;
+        subtextPaint.setTextSize(subtextSize);
+        subtextLayout =
+                new StaticLayout(getSubtextString(), subtextPaint, WIDTH, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
+        lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
+        float availablePixels = HEIGHT - temperatureBottom;
+        int maxFullLines = (int)(availablePixels / lineHeight);
+        int subtextStart = HEIGHT - (int)(maxFullLines * lineHeight);
+        canvas.translate(0, subtextStart);
+        subtextLayout.draw(canvas);
+
+        remoteViews.setImageViewBitmap(R.id.Bitmap, bitmap);
+
+        Log.d(TAG, String.format("Display layout is %d-%d, %d-%d, subtext lines are %fpx, font is %fpx",
+                0, temperatureBottom,
+                subtextStart, HEIGHT - 1,
+                lineHeight, subtextSize));
+        Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
+        int subtextLinesShown = Math.min(maxFullLines, subtextLayout.getLineCount());
+        Log.d(TAG, String.format("Displaying %d/%d lines of subtext: <%s>",
+                subtextLinesShown, subtextLayout.getLineCount(),
+                getSubtextString()));
 
         return remoteViews;
     }
