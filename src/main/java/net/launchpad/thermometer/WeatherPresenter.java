@@ -107,6 +107,10 @@ public class WeatherPresenter {
         if (getSubtextString().isEmpty()) {
             // No subtext, make the temperature number as big as possible
             TEMPERATURE_HEIGHT = HEIGHT;
+        } else if (forceShowExcuse || weather == null) {
+            // No weather or subtext is important for some other reason, give the subtext more room
+            // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
+            TEMPERATURE_HEIGHT = HEIGHT / 3 - 3;
         } else {
             // This is the default case
             // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
