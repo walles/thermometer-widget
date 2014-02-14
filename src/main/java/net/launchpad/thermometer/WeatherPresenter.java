@@ -91,6 +91,7 @@ public class WeatherPresenter {
      */
     @NotNull
     public RemoteViews createRemoteViews(Context context, int color) {
+        // FIXME: Refactor this method to be readable
         RemoteViews remoteViews =
                 new RemoteViews(ThermometerWidget.class.getPackage().getName(),
                         R.layout.main);
