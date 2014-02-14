@@ -102,7 +102,7 @@ public class WeatherPresenter {
         // (2014feb13). The current formula is based on the fact that you usually get 4x4 widgets on your home screen,
         // so a quarter of the screen size should be enough.
         final int WIDTH = screenWidth / 4;
-        //noinspection SuspiciousNameCombination
+        //noinspection SuspiciousNameCombination,UnnecessaryLocalVariable
         final int HEIGHT = WIDTH;
         final int TEMPERATURE_HEIGHT;
         if (getSubtextString().isEmpty()) {
