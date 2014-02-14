@@ -107,14 +107,10 @@ public class WeatherPresenter {
         if (getSubtextString().isEmpty()) {
             // No subtext, make the temperature number as big as possible
             TEMPERATURE_HEIGHT = HEIGHT;
-        } else if (forceShowExcuse) {
-            // Subtext is important, give it more space
-            // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
-            TEMPERATURE_HEIGHT = HEIGHT / 2 - 3;
         } else {
             // This is the default case
             // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
-            TEMPERATURE_HEIGHT = (HEIGHT * 2) / 3 - 3;
+            TEMPERATURE_HEIGHT = HEIGHT / 2 - 3;
         }
         float subtextSize = HEIGHT / 6f;
         Bitmap bitmap =
