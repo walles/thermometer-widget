@@ -147,7 +147,7 @@ public class WeatherPresenter {
         TextPaint subtextPaint = new TextPaint(temperaturePaint);
         subtextPaint.setTextSize(subtextSize);
         subtextPaint.setTextAlign(Paint.Align.LEFT);
-        subtextPaint.setTypeface(Typeface.DEFAULT);
+        subtextPaint.setTypeface(Typeface.SERIF);
         StaticLayout subtextLayout =
                 new StaticLayout(getSubtextString(), subtextPaint, WIDTH, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
