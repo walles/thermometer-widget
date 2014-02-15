@@ -120,7 +120,15 @@ public class WeatherPresenter {
         Rect bounds = new Rect();
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         float wFactor = WIDTH / (float)bounds.width();
-        float hFactor = TEMPERATURE_HEIGHT / (float)bounds.height();
+        float hMeasurement;
+        if (getSubtextString().isEmpty()) {
+            // No subtext, maximize the temperature height
+            hMeasurement = bounds.height();
+        } else {
+            // Use the temperature font's descent as space below the temperature, and thus above the subtext
+            hMeasurement = temperaturePaint.descent() - temperaturePaint.ascent();
+        }
+        float hFactor = TEMPERATURE_HEIGHT / hMeasurement;
         float factor = Math.min(wFactor, hFactor);
         textSize *= factor;
         temperaturePaint.setTextSize(textSize);
@@ -143,15 +151,14 @@ public class WeatherPresenter {
         float availablePixels = HEIGHT - temperatureBottom;
         int maxFullLines = (int)(availablePixels / lineHeight);
         int subtextStart = HEIGHT - (int)(maxFullLines * lineHeight);
-        TextPaint subtextPaint = subtextLayout.getPaint();
-        assert subtextPaint != null;
-        float subtextFontSize = subtextPaint.getTextSize();
-        subtextStart += lineHeight - subtextFontSize;
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
         remoteViews.setImageViewBitmap(R.id.Bitmap, bitmap);
 
+        TextPaint subtextPaint = subtextLayout.getPaint();
+        assert subtextPaint != null;
+        float subtextFontSize = subtextPaint.getTextSize();
         Log.d(TAG, String.format("Display layout is %d-%d, %d-%d, subtext lines are %fpx, font is %fpx",
                 0, temperatureBottom,
                 subtextStart, HEIGHT - 1,
