@@ -104,20 +104,9 @@ public class WeatherPresenter {
         final int WIDTH = screenWidth / 4;
         //noinspection SuspiciousNameCombination,UnnecessaryLocalVariable
         final int HEIGHT = WIDTH;
-        final int TEMPERATURE_HEIGHT;
-        if (getSubtextString().isEmpty()) {
-            // No subtext, make the temperature number as big as possible
-            TEMPERATURE_HEIGHT = HEIGHT;
-        } else if (forceShowExcuse || weather == null) {
-            // No weather or subtext is important for some other reason, give the subtext more room
-            // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
-            TEMPERATURE_HEIGHT = HEIGHT / 3 - 3;
-        } else {
-            // This is the default case
-            // FIXME: Get rid of the -3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
-            TEMPERATURE_HEIGHT = HEIGHT / 2 - 3;
-        }
-        float subtextSize = HEIGHT / 6f;
+        final float SUBTEXT_LINE_HEIGHT = HEIGHT / 6f;
+        StaticLayout subtextLayout = getSubtextLayout(WIDTH, SUBTEXT_LINE_HEIGHT, color);
+        final int TEMPERATURE_HEIGHT = computeMaxTemperatureHeight(HEIGHT, subtextLayout.getHeight());
         Bitmap bitmap =
                 Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -146,25 +135,18 @@ public class WeatherPresenter {
         float yPos = textSize - temperaturePaint.descent();
         canvas.drawText(getTemperatureString(), xPos, yPos, temperaturePaint);
 
-        // Draw the subtext
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         int temperatureBottom = bounds.height();
-        TextPaint subtextPaint = new TextPaint(temperaturePaint);
-        subtextPaint.setTextSize(subtextSize);
-        subtextPaint.setTextAlign(Paint.Align.LEFT);
-        subtextPaint.setTypeface(Typeface.SERIF);
-        StaticLayout subtextLayout =
-                new StaticLayout(getSubtextString(), subtextPaint, WIDTH, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
+
+        // Draw the subtext
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
-        float subtextFactor = subtextSize / lineHeight;
-        subtextSize *= subtextFactor;
-        subtextPaint.setTextSize(subtextSize);
-        subtextLayout =
-                new StaticLayout(getSubtextString(), subtextPaint, WIDTH, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
-        lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
         float availablePixels = HEIGHT - temperatureBottom;
         int maxFullLines = (int)(availablePixels / lineHeight);
         int subtextStart = HEIGHT - (int)(maxFullLines * lineHeight);
+        TextPaint subtextPaint = subtextLayout.getPaint();
+        assert subtextPaint != null;
+        float subtextFontSize = subtextPaint.getTextSize();
+        subtextStart += lineHeight - subtextFontSize;
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
@@ -173,7 +155,7 @@ public class WeatherPresenter {
         Log.d(TAG, String.format("Display layout is %d-%d, %d-%d, subtext lines are %fpx, font is %fpx",
                 0, temperatureBottom,
                 subtextStart, HEIGHT - 1,
-                lineHeight, subtextSize));
+                lineHeight, subtextFontSize));
         Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
         int subtextLinesShown = Math.min(maxFullLines, subtextLayout.getLineCount());
         Log.d(TAG, String.format("Displaying %d/%d lines of subtext: <%s>",
@@ -181,6 +163,45 @@ public class WeatherPresenter {
                 getSubtextString()));
 
         return remoteViews;
+    }
+
+    private int computeMaxTemperatureHeight(int canvasHeight, int subtextHeight) {
+        // FIXME: Get rid of this 3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
+        final int GOODLUCK = 3;
+        int returnMe;
+        if (getSubtextString().isEmpty()) {
+            // No subtext, make the temperature number as big as possible
+            returnMe = canvasHeight;
+        } else if (forceShowExcuse || weather == null) {
+            // No weather or subtext is important for some other reason, give the subtext more room
+            returnMe = canvasHeight / 3 - GOODLUCK;
+        } else {
+            // This is the default case
+            returnMe = canvasHeight / 2 - GOODLUCK;
+        }
+
+        if (returnMe < (canvasHeight - subtextHeight - GOODLUCK)) {
+            returnMe = (canvasHeight - subtextHeight - GOODLUCK);
+        }
+        return returnMe;
+    }
+
+    @NotNull
+    private StaticLayout getSubtextLayout(int width, float lineHeight, int color) {
+        TextPaint subtextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        subtextPaint.setTextSize(lineHeight);
+        subtextPaint.setTextAlign(Paint.Align.LEFT);
+        subtextPaint.setTypeface(Typeface.SERIF);
+        subtextPaint.setColor(color);
+        StaticLayout subtextLayout =
+                new StaticLayout(getSubtextString(), subtextPaint, width, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
+        float measuredLineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
+        float subtextFactor = lineHeight / measuredLineHeight;
+        lineHeight *= subtextFactor;
+        subtextPaint.setTextSize(lineHeight);
+        subtextLayout =
+                new StaticLayout(getSubtextString(), subtextPaint, width, Layout.Alignment.ALIGN_CENTER, 1f, 0f, false);
+        return subtextLayout;
     }
 
     private void updateStrings() {
