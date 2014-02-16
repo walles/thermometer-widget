@@ -126,8 +126,6 @@ public class WeatherPresenter {
         float factor = Math.min(wFactor, hFactor);
         textSize *= factor;
         temperaturePaint.setTextSize(textSize);
-        Log.d(TAG, String.format("HEIGHT=%d, TEMPERATURE_HEIGHT=%d, bounds=%dx%f, wFactor=%f, hFactor=%f, factor=%f, textSize=%f",
-                HEIGHT, TEMPERATURE_HEIGHT, bounds.width(), hMeasurement, wFactor, hFactor, factor, textSize));
 
         temperaturePaint.setColor(color);
         temperaturePaint.setTextAlign(Paint.Align.CENTER);
@@ -140,11 +138,12 @@ public class WeatherPresenter {
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         float temperatureBottom = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
 
-        // Draw the subtext
+        // Draw the subtext as low as possible while still showing as many lines as possible
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
         float availablePixels = HEIGHT - temperatureBottom;
         int maxFullLines = (int)(availablePixels / lineHeight);
-        int subtextStart = HEIGHT - (int)(maxFullLines * lineHeight);
+        int fullLinesToShow = Math.min(subtextLayout.getLineCount(), maxFullLines);
+        int subtextStart = HEIGHT - (int)(fullLinesToShow * lineHeight);
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
@@ -197,9 +196,12 @@ public class WeatherPresenter {
             returnMe = canvasHeight / 2 - GOODLUCK;
         }
 
-        if (returnMe < (canvasHeight - subtextHeight - GOODLUCK)) {
-            returnMe = (canvasHeight - subtextHeight - GOODLUCK);
-        }
+        // We can use all space not used by the subtext
+        returnMe = Math.max(returnMe, canvasHeight - subtextHeight - GOODLUCK);
+
+        // We don't want to be bigger than an app icon
+        returnMe = Math.min(returnMe, (int)(canvasHeight * 0.6f) - GOODLUCK);
+
         return returnMe;
     }
 
