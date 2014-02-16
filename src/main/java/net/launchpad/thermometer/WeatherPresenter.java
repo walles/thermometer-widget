@@ -105,6 +105,7 @@ public class WeatherPresenter {
         //noinspection SuspiciousNameCombination,UnnecessaryLocalVariable
         final int HEIGHT = WIDTH;
         final float SUBTEXT_LINE_HEIGHT = HEIGHT / 6f;
+        final float TEMPERATURE_SUBTEXT_SEPARATION = SUBTEXT_LINE_HEIGHT * 0.3f;
         StaticLayout subtextLayout = getSubtextLayout(WIDTH, SUBTEXT_LINE_HEIGHT, color);
         final int TEMPERATURE_HEIGHT = computeMaxTemperatureHeight(HEIGHT, subtextLayout.getHeight());
         Bitmap bitmap =
@@ -120,20 +121,13 @@ public class WeatherPresenter {
         Rect bounds = new Rect();
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         float wFactor = WIDTH / (float)bounds.width();
-        float hMeasurement;
-        if (getSubtextString().isEmpty()) {
-            // No subtext, maximize the temperature height
-            hMeasurement = bounds.height();
-        } else {
-            // Use the temperature font's descent as space below the temperature, and thus above the subtext
-            hMeasurement = temperaturePaint.descent() - temperaturePaint.ascent();
-        }
+        float hMeasurement = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
         float hFactor = TEMPERATURE_HEIGHT / hMeasurement;
         float factor = Math.min(wFactor, hFactor);
         textSize *= factor;
         temperaturePaint.setTextSize(textSize);
-        Log.d(TAG, String.format("HEIGHT=%d, TEMPERATURE_HEIGHT=%d, bounds=%dx%d, wFactor=%f, hFactor=%f, factor=%f, textSize=%f",
-                HEIGHT, TEMPERATURE_HEIGHT, bounds.width(), bounds.height(), wFactor, hFactor, factor, textSize));
+        Log.d(TAG, String.format("HEIGHT=%d, TEMPERATURE_HEIGHT=%d, bounds=%dx%f, wFactor=%f, hFactor=%f, factor=%f, textSize=%f",
+                HEIGHT, TEMPERATURE_HEIGHT, bounds.width(), hMeasurement, wFactor, hFactor, factor, textSize));
 
         temperaturePaint.setColor(color);
         temperaturePaint.setTextAlign(Paint.Align.CENTER);
@@ -144,7 +138,7 @@ public class WeatherPresenter {
         canvas.drawText(getTemperatureString(), xPos, yPos, temperaturePaint);
 
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
-        int temperatureBottom = bounds.height();
+        float temperatureBottom = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
 
         // Draw the subtext
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
@@ -159,9 +153,10 @@ public class WeatherPresenter {
         TextPaint subtextPaint = subtextLayout.getPaint();
         assert subtextPaint != null;
         float subtextFontSize = subtextPaint.getTextSize();
-        Log.d(TAG, String.format("Display layout is %d-%d, %d-%d, subtext lines are %fpx, font is %fpx",
+        Log.d(TAG, String.format("Display layout is %d-%f, %d-%d, %d, subtext lines are %fpx, font is %fpx",
                 0, temperatureBottom,
-                subtextStart, HEIGHT - 1,
+                subtextStart, Math.min(HEIGHT - 1, subtextStart + subtextLayout.getHeight()),
+                HEIGHT - 1,
                 lineHeight, subtextFontSize));
         Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
         int subtextLinesShown = Math.min(maxFullLines, subtextLayout.getLineCount());
@@ -170,6 +165,21 @@ public class WeatherPresenter {
                 getSubtextString()));
 
         return remoteViews;
+    }
+
+    /**
+     * How high is the temperature string?
+     * @param spacing The space wanted between the temperature and the subtext, in pixels
+     * @return The height of the temperature string in pixels
+     */
+    private float getTemperatureHeight(Paint temperaturePaint, float spacing) {
+        Rect bounds = new Rect();
+        temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
+        if (subtextString.isEmpty()) {
+            return bounds.height();
+        } else {
+            return bounds.height() + spacing;
+        }
     }
 
     private int computeMaxTemperatureHeight(int canvasHeight, int subtextHeight) {
