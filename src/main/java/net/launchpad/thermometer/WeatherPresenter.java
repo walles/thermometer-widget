@@ -114,6 +114,7 @@ public class WeatherPresenter {
         canvas.drawColor(Color.TRANSPARENT);
 
         // Draw the temperature
+        Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
         float textSize = TEMPERATURE_HEIGHT;
         Paint temperaturePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         temperaturePaint.setTextSize(textSize);
@@ -138,12 +139,8 @@ public class WeatherPresenter {
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         float temperatureBottom = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
 
-        // Draw the subtext as low as possible while still showing as many lines as possible
-        float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
-        float availablePixels = HEIGHT - temperatureBottom;
-        int maxFullLines = (int)(availablePixels / lineHeight);
-        int fullLinesToShow = Math.min(subtextLayout.getLineCount(), maxFullLines);
-        int subtextStart = HEIGHT - (int)(fullLinesToShow * lineHeight);
+        // Draw the subtext
+        int subtextStart = computeSubtextStart(subtextLayout, HEIGHT, (int)temperatureBottom);
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
@@ -156,14 +153,40 @@ public class WeatherPresenter {
                 0, temperatureBottom,
                 subtextStart, Math.min(HEIGHT - 1, subtextStart + subtextLayout.getHeight()),
                 HEIGHT - 1,
-                lineHeight, subtextFontSize));
-        Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
+                subtextLayout.getHeight() / (float)subtextLayout.getLineCount(),
+                subtextFontSize));
+
+        return remoteViews;
+    }
+
+    /**
+     * At what pixel line should we draw the subtext?
+     * <p>
+     * Try drawing it as low as possible while still showing as many lines as possible.
+     * @param subtextLayout The subtext to draw
+     * @param canvasHeight The height of the canvas we're drawing on
+     * @param upperLimit We may not start drawing on a higher up line than this one
+     */
+    private int computeSubtextStart(StaticLayout subtextLayout, int canvasHeight, int upperLimit) {
+        float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
+        float availablePixels = canvasHeight - upperLimit;
+        int maxFullLines = (int)(availablePixels / lineHeight);
+        int fullLinesToShow = Math.min(subtextLayout.getLineCount(), maxFullLines);
+        int subtextStart = canvasHeight - (int)(fullLinesToShow * lineHeight);
+
         int subtextLinesShown = Math.min(maxFullLines, subtextLayout.getLineCount());
         Log.d(TAG, String.format("Displaying %d/%d lines of subtext: <%s>",
                 subtextLinesShown, subtextLayout.getLineCount(),
                 getSubtextString()));
 
-        return remoteViews;
+        if (subtextLayout.getLineCount() == 1) {
+            // If we have a single line of text, try putting it where the 4.2 launcher puts its icon titles. The number
+            // "8" comes from doing measurements on screenshots to get the text positioned properly.
+            subtextStart -= 8;
+        }
+        assert subtextStart >= upperLimit;
+
+        return subtextStart;
     }
 
     /**
