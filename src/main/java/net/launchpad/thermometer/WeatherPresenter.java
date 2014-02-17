@@ -197,11 +197,7 @@ public class WeatherPresenter {
     private float getTemperatureHeight(Paint temperaturePaint, float spacing) {
         Rect bounds = new Rect();
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
-        if (subtextString.isEmpty()) {
-            return bounds.height();
-        } else {
-            return bounds.height() + spacing;
-        }
+        return bounds.height() + spacing;
     }
 
     private int computeMaxTemperatureHeight(int canvasHeight, int subtextHeight) {
