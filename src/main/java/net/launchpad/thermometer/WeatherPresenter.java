@@ -179,10 +179,11 @@ public class WeatherPresenter {
                 subtextLinesShown, subtextLayout.getLineCount(),
                 getSubtextString()));
 
+        //noinspection StatementWithEmptyBody
         if (subtextLayout.getLineCount() == 1) {
-            // If we have a single line of text, try putting it where the 4.2 launcher puts its icon titles. The number
-            // "8" comes from doing measurements on screenshots to get the text positioned properly.
-            subtextStart -= 8;
+            // FIXME: If we have a single line of text, try putting it where the 4.2 launcher puts its icon titles.
+            // But since we don't know neither the widget size nor how the launcher lays out its app icons, I don't
+            // know if or how we could do this. /JW-2014feb18
         }
         assert subtextStart >= upperLimit;
 
