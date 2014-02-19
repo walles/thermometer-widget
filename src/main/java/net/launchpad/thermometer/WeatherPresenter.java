@@ -107,7 +107,7 @@ public class WeatherPresenter {
         final float SUBTEXT_LINE_HEIGHT = HEIGHT / 6f;
         final float TEMPERATURE_SUBTEXT_SEPARATION = SUBTEXT_LINE_HEIGHT * 0.3f;
         StaticLayout subtextLayout = getSubtextLayout(WIDTH, SUBTEXT_LINE_HEIGHT, color);
-        final int TEMPERATURE_HEIGHT = computeMaxTemperatureHeight(HEIGHT, subtextLayout.getHeight());
+        final float TEMPERATURE_HEIGHT = computeMaxTemperatureHeight(HEIGHT, subtextLayout.getHeight());
         Bitmap bitmap =
                 Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -140,7 +140,7 @@ public class WeatherPresenter {
         float temperatureBottom = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
 
         // Draw the subtext
-        float subtextStart = computeSubtextStart(subtextLayout, HEIGHT, (int)temperatureBottom);
+        float subtextStart = computeSubtextStart(subtextLayout, HEIGHT, temperatureBottom);
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
@@ -167,7 +167,7 @@ public class WeatherPresenter {
      * @param canvasHeight The height of the canvas we're drawing on
      * @param upperLimit We may not start drawing on a higher up line than this one
      */
-    private float computeSubtextStart(StaticLayout subtextLayout, int canvasHeight, int upperLimit) {
+    private float computeSubtextStart(StaticLayout subtextLayout, int canvasHeight, float upperLimit) {
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
         float availablePixels = canvasHeight - upperLimit;
         int maxFullLines = (int)(availablePixels / lineHeight);
@@ -201,26 +201,26 @@ public class WeatherPresenter {
         return bounds.height() + spacing;
     }
 
-    private int computeMaxTemperatureHeight(int canvasHeight, int subtextHeight) {
+    private float computeMaxTemperatureHeight(int canvasHeight, int subtextHeight) {
         // FIXME: Get rid of this 3 thing; it's needed not to get too few lines of subtext, but understanding the problem and making it go away would be better.
         final int GOODLUCK = 3;
-        int returnMe;
+        float returnMe;
         if (getSubtextString().isEmpty()) {
             // No subtext, make the temperature number as big as possible
             returnMe = canvasHeight;
         } else if (forceShowExcuse || weather == null) {
             // No weather or subtext is important for some other reason, give the subtext more room
-            returnMe = canvasHeight / 3 - GOODLUCK;
+            returnMe = canvasHeight / 3f - GOODLUCK;
         } else {
             // This is the default case
-            returnMe = canvasHeight / 2 - GOODLUCK;
+            returnMe = canvasHeight / 2f - GOODLUCK;
         }
 
         // We can use all space not used by the subtext
         returnMe = Math.max(returnMe, canvasHeight - subtextHeight - GOODLUCK);
 
         // We don't want to be bigger than an app icon
-        returnMe = Math.min(returnMe, (int)(canvasHeight * 0.6f) - GOODLUCK);
+        returnMe = Math.min(returnMe, (canvasHeight * 0.6f) - GOODLUCK);
 
         return returnMe;
     }
