@@ -140,7 +140,7 @@ public class WeatherPresenter {
         float temperatureBottom = getTemperatureHeight(temperaturePaint, TEMPERATURE_SUBTEXT_SEPARATION);
 
         // Draw the subtext
-        int subtextStart = computeSubtextStart(subtextLayout, HEIGHT, (int)temperatureBottom);
+        float subtextStart = computeSubtextStart(subtextLayout, HEIGHT, (int)temperatureBottom);
         canvas.translate(0, subtextStart);
         subtextLayout.draw(canvas);
 
@@ -149,7 +149,7 @@ public class WeatherPresenter {
         TextPaint subtextPaint = subtextLayout.getPaint();
         assert subtextPaint != null;
         float subtextFontSize = subtextPaint.getTextSize();
-        Log.d(TAG, String.format("Display layout is %d-%f, %d-%d, %d, subtext lines are %fpx, font is %fpx",
+        Log.d(TAG, String.format("Display layout is %d-%f, %f-%f, %d, subtext lines are %fpx, font is %fpx",
                 0, temperatureBottom,
                 subtextStart, Math.min(HEIGHT - 1, subtextStart + subtextLayout.getHeight()),
                 HEIGHT - 1,
@@ -167,12 +167,12 @@ public class WeatherPresenter {
      * @param canvasHeight The height of the canvas we're drawing on
      * @param upperLimit We may not start drawing on a higher up line than this one
      */
-    private int computeSubtextStart(StaticLayout subtextLayout, int canvasHeight, int upperLimit) {
+    private float computeSubtextStart(StaticLayout subtextLayout, int canvasHeight, int upperLimit) {
         float lineHeight = subtextLayout.getHeight() / (float)subtextLayout.getLineCount();
         float availablePixels = canvasHeight - upperLimit;
         int maxFullLines = (int)(availablePixels / lineHeight);
         int fullLinesToShow = Math.min(subtextLayout.getLineCount(), maxFullLines);
-        int subtextStart = canvasHeight - (int)(fullLinesToShow * lineHeight);
+        float subtextStart = canvasHeight - (fullLinesToShow * lineHeight);
 
         int subtextLinesShown = Math.min(maxFullLines, subtextLayout.getLineCount());
         Log.d(TAG, String.format("Displaying %d/%d lines of subtext: <%s>",
