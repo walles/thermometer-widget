@@ -31,11 +31,13 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import com.larswerkman.holocolorpicker.ColorPicker;
 import com.larswerkman.holocolorpicker.SVBar;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Configuration dialog for the {@link ThermometerWidget}.
@@ -49,6 +51,13 @@ public class ThermometerConfigure extends PreferenceFragment {
     private ColorPicker colorPicker;
     @NotNull
     private Preference colorPreference;
+
+    @Nullable
+    @Override
+    public View onCreateView(@NotNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // Inspired by http://stackoverflow.com/questions/12305563/add-buttons-to-preferencefragment
+        return inflater.inflate(R.layout.preference_frame, null);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
