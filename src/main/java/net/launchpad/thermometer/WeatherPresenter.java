@@ -25,6 +25,7 @@ public class WeatherPresenter {
      */
     private static final int MAX_WEATHER_AGE_MINUTES = 150;
 
+    private boolean dirty = true;
     private @NotNull String temperatureString;
     private @NotNull String subtextString;
 
@@ -44,42 +45,50 @@ public class WeatherPresenter {
         this.weather = weather;
         this.excuse = excuse;
 
-        updateStrings();
+        dirty = true;
     }
 
     @NotNull
     public String getTemperatureString() {
+        if (dirty) {
+            updateStrings();
+        }
+
         return temperatureString;
     }
 
     @NotNull
     public String getSubtextString() {
+        if (dirty) {
+            updateStrings();
+        }
+
         return subtextString;
     }
 
     public void setShowMetadata(boolean showMetadata) {
         this.showMetadata = showMetadata;
-        updateStrings();
+        dirty = true;
     }
 
     public void setUse24HoursFormat(boolean use24HoursFormat) {
         this.use24HoursFormat = use24HoursFormat;
-        updateStrings();
+        dirty = true;
     }
 
     public void setUseCelsius(boolean useCelsius) {
         this.useCelsius = useCelsius;
-        updateStrings();
+        dirty = true;
     }
 
     public void setWithWindChill(boolean withWindChill) {
         this.withWindChill = withWindChill;
-        updateStrings();
+        dirty = true;
     }
 
     public void setForceShowExcuse(boolean forceShowExcuse) {
         this.forceShowExcuse = forceShowExcuse;
-        updateStrings();
+        dirty = true;
     }
 
     /**
@@ -299,5 +308,7 @@ public class WeatherPresenter {
         if (forceShowExcuse) {
             subtextString = excuse;
         }
+
+        dirty = false;
     }
 }
