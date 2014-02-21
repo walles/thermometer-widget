@@ -96,7 +96,7 @@ public class WidgetManager extends Service {
     /**
      * Thread that fetches temperature data for us.
      */
-    private TemperatureFetcher temperatureFetcher;
+    private final TemperatureFetcher temperatureFetcher;
 
     /**
      * This thing puts log messages into files for us.
@@ -549,35 +549,16 @@ public class WidgetManager extends Service {
         return null;
     }
 
-    /**
-     * Handle the intent from {@link #onStart(Intent, int)} /
-     * {@link #onStartCommand(Intent, int, int)}.
-     *
-     * @param intent the intent from onStart() / onStartCommand().
-     *
-     * @return True if the intent was handled, false otherwise
-     */
-    private boolean handleStart(Intent intent) {
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
         if (getWidgetIds().length == 0) {
             // We have no widgets, shut down and drop out
             close();
-            return true;
         } else {
             onUpdateInternal(intent);
-            return true;
         }
-    }
 
-    @Override
-    public void onStart(Intent intent, int startId) {
-        handleStart(intent);
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        handleStart(intent);
-
-        // FIXME: Should we return sticky here on unknown intents? /JW-2010aug19
+        // All code expects us to be around continuously, return STICKY here
         return START_STICKY;
     }
 

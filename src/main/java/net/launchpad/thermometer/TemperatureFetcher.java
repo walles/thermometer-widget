@@ -57,7 +57,7 @@ public class TemperatureFetcher extends Thread implements Callback {
     /**
      * Widget controller.
      */
-    private WidgetManager widgetManager;
+    private final WidgetManager widgetManager;
 
     /**
      * Message handler.
