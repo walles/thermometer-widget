@@ -75,7 +75,7 @@ public class ThermometerWidget extends AppWidgetProvider {
                 return;
             }
 
-            WidgetManager.onUpdate(context, UpdateReason.GPSA_CHANGED);
+            WidgetManager.onUpdate(context, UpdateReason.GPSA_RECONNECT);
         } else {
             super.onReceive(context, intent);
         }

@@ -59,6 +59,13 @@ public class FixGpsaActivity extends Activity {
             return;
         }
 
+        if (errorCode == ConnectionResult.SUCCESS) {
+            Log.i(TAG, "GPSA error seems gone, asking widget to try again");
+            WidgetManager.onUpdate(this, WidgetManager.UpdateReason.GPSA_RECONNECT);
+            finish();
+            return;
+        }
+
         Log.e(TAG, "GPSA error not recoverable: " + GooglePlayServicesUtil.getErrorString(errorCode));
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

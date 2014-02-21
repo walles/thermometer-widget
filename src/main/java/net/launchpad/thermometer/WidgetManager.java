@@ -316,9 +316,9 @@ public class WidgetManager extends Service {
         DISPLAY_OR_TIMER,
 
         /**
-         * Google Play Services API updated / installed / removed
+         * We should try re-connecting to the Google Play Services API.
          */
-        GPSA_CHANGED
+        GPSA_RECONNECT
     }
 
     /**
@@ -477,7 +477,7 @@ public class WidgetManager extends Service {
             why = UpdateReason.UNKNOWN;
         }
 
-        if (why == UpdateReason.GPSA_CHANGED) {
+        if (why == UpdateReason.GPSA_RECONNECT) {
             if (updateListener != null) {
                 updateListener.reconnectGpsa();
             } else {
