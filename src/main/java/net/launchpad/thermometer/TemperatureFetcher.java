@@ -331,7 +331,6 @@ public class TemperatureFetcher extends Thread implements Callback {
         Weather weather =
             fetchWeather(extras.getDouble("latitude"), extras.getDouble("longitude"));
         widgetManager.setWeather(weather);
-        widgetManager.updateUi();
 
         // Returning true means that we have handled the message according to:
         // http://code.google.com/p/android/issues/detail?id=6464

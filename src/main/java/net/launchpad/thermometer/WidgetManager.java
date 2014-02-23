@@ -435,10 +435,12 @@ public class WidgetManager extends Service {
     private void onUpdateInternal(Intent intent) {
         Log.d(TAG, "onUpdate() called");
 
+        boolean starting = false;
         synchronized (weatherLock) {
             if (updateListener == null) {
                 Log.d(TAG, "Have no update listener, registering a new one");
                 updateListener = new UpdateListener(this);
+                starting = true;
             } else {
                 Log.d(TAG, "Not touching existing update listener");
             }
@@ -446,8 +448,10 @@ public class WidgetManager extends Service {
             setPeriodicUpdatesEnabled(true);
         }
 
-        // Show some UI as quickly as possible
-        updateUi();
+        if (starting) {
+            // Show some UI as quickly as possible
+            updateUi();
+        }
 
         // Schedule a temperature update
         scheduleTemperatureUpdate(intent);
