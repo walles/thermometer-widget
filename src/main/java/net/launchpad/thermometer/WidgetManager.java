@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -38,6 +39,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Debug;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
@@ -51,7 +53,25 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author johan.walles@gmail.com
  */
+// Need to suppress warning about GENERATE_TRACEFILES always being false / true
+@SuppressWarnings("ConstantConditions")
 public class WidgetManager extends Service {
+    /**
+     * Enable this to generate a trace file from when the widget is added to when it is removed.
+     *
+     * @see #TRACE_FILE_NAME
+     */
+    private final boolean GENERATE_TRACEFILES = false;
+
+    /**
+     * This path needs to be hard coded since {@link #getCacheDir()} returns null when called from the constructor
+     * where this is used.
+     *
+     * @see #GENERATE_TRACEFILES
+     */
+    @SuppressLint("SdCardPath")
+    private final String TRACE_FILE_NAME = "/data/data/net.launchpad.thermometer/johan.trace";
+
     /**
      * Used for tagging update intents with why they were sent.
      */
@@ -113,6 +133,10 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
+        if (GENERATE_TRACEFILES) {
+            Debug.startMethodTracing(TRACE_FILE_NAME);
+        }
+
         temperatureFetcher = new TemperatureFetcher(this);
         temperatureFetcher.start();
     }
@@ -553,6 +577,9 @@ public class WidgetManager extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (getWidgetIds().length == 0) {
+            if (GENERATE_TRACEFILES) {
+                Debug.stopMethodTracing();
+            }
             // We have no widgets, shut down and drop out
             close();
         } else {
