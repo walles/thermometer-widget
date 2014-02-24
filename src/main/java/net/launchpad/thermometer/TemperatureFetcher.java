@@ -150,10 +150,6 @@ public class TemperatureFetcher extends Thread implements Callback {
 
                 Weather weather = new Weather(new JSONObject(jsonString));
 
-                widgetManager.setStatus(String.format("%s weather from %s",
-                        Util.minutesToTimeOldString(weather.getAgeMinutes()),
-                        weather.getStationName()));
-
                 // If weather is 40 minutes old, wait at least 20 minutes until next fetch
                 int fetchValidMinutes = weather.getAgeMinutes() / 2;
                 if (fetchValidMinutes < 30) {
@@ -318,19 +314,25 @@ public class TemperatureFetcher extends Thread implements Callback {
         if (extras == null) {
             Log.w(TAG, "Got message with no bundle, can't handle it: " + message);
             widgetManager.setStatus("Internal error in handleMessage()");
-            widgetManager.setWeather(null);
             return false;
         }
         if (!extras.containsKey("latitude") || !extras.containsKey("longitude")) {
             Log.w(TAG, "Message didn't contain both lat and lon, can't handle it: " + message);
             widgetManager.setStatus("Missing lat/lon in handleMessage()");
-            widgetManager.setWeather(null);
             return false;
         }
 
         Weather weather =
             fetchWeather(extras.getDouble("latitude"), extras.getDouble("longitude"));
-        widgetManager.setWeather(weather);
+        if (weather != null) {
+            widgetManager.setWeather(
+                    weather,
+                    String.format("%s weather from %s",
+                            Util.minutesToTimeOldString(weather.getAgeMinutes()),
+                            weather.getStationName()));
+        } else {
+            Log.w(TAG, "Got null weather from fetchWeather()");
+        }
 
         // Returning true means that we have handled the message according to:
         // http://code.google.com/p/android/issues/detail?id=6464

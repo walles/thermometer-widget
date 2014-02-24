@@ -187,11 +187,7 @@ public class WidgetManager extends Service {
      *
      * @param weather What the weather is like.
      */
-    public void setWeather(@Nullable Weather weather) {
-        if (weather == null) {
-            return;
-        }
-
+    public void setWeather(@NotNull Weather weather, @NotNull String status) {
         if (weather.getObservationTime() == null) {
             Log.e(TAG, "New weather observation has no time stamp, dropping it");
             return;
@@ -204,7 +200,9 @@ public class WidgetManager extends Service {
             }
 
             this.weather = weather;
-            updateUi();
+
+            // Setting the status here will implicitly update the UI
+            setStatus(status);
         }
     }
 
@@ -340,7 +338,6 @@ public class WidgetManager extends Service {
         }
         if (currentLocation == null) {
             Log.d(TAG, "Don't know where we are, can't fetch any weather");
-            setWeather(null);
             return;
         }
 
