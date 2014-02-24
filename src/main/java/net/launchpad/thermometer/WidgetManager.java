@@ -40,6 +40,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Debug;
+import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
@@ -69,8 +70,11 @@ public class WidgetManager extends Service {
      *
      * @see #GENERATE_TRACEFILES
      */
+    @SuppressWarnings("FieldCanBeLocal")
     @SuppressLint("SdCardPath")
     private final String TRACE_FILE_NAME = "/data/data/net.launchpad.thermometer/johan.trace";
+
+    private Handler handler = new Handler();
 
     /**
      * Used for tagging update intents with why they were sent.
@@ -402,9 +406,27 @@ public class WidgetManager extends Service {
     }
 
     /**
-     * Refresh the widget display.
+     * Enqueue a widget display update.
      */
     public void updateUi() {
+        boolean posted = handler.post(new Runnable() {
+            @Override
+            public void run() {
+                doUpdateUi();
+            }
+        });
+
+        if (!posted) {
+            doUpdateUi();
+        }
+    }
+
+    /**
+     * Refresh the widget display.
+     *
+     * @see #updateUi()
+     */
+    private void doUpdateUi() {
         Log.d(TAG, "Updating widget display...");
 
         WeatherPresenter weatherPresenter = new WeatherPresenter(getWeather(), getStatus());
@@ -471,7 +493,7 @@ public class WidgetManager extends Service {
 
         if (starting) {
             // Show some UI as quickly as possible
-            updateUi();
+            doUpdateUi();
         }
 
         // Schedule a temperature update
