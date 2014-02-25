@@ -130,17 +130,61 @@ implements LocationListener, Closeable {
             }
         };
         widgetManager.getPreferences().registerOnSharedPreferenceChangeListener(preferenceChangeListener);
+
+        registerNetworkPositioningListener();
+    }
+
+    /**
+     * Listen for enabling of the network location provider so that we can drop the "Click to enable network
+     * positioning" text after the user has done that.
+     */
+    private void registerNetworkPositioningListener() {
+        LocationManager locationManager =
+                (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
+        locationManager.requestLocationUpdates(
+                LocationManager.NETWORK_PROVIDER,
+                30 * 60 * 1000,
+                0,
+                new android.location.LocationListener() {
+                    @Override
+                    public void onLocationChanged(Location location) {
+                        // Intentionally ignored; we get this from the Google Play Services Location API because of
+                        // Android bug 57707
+                        Log.i(TAG, "Location provider location updated: " + location);
+                    }
+
+                    @Override
+                    public void onStatusChanged(String s, int i, Bundle bundle) {
+                        // Intentionally ignored; let the Google Play Services Location API deal with these events
+                        Log.i(TAG, "Location provider status changed: " + s + " " + i + " " + bundle);
+                    }
+
+                    @Override
+                    public void onProviderEnabled(String s) {
+                        Log.i(TAG, "Location provider enabled: " + s);
+
+                        // This will give us a new location and remove the "Click to enable network positioning" text
+                        reconnectGpsa();
+                    }
+
+                    @Override
+                    public void onProviderDisabled(String s) {
+                        // Intentionally ignored; requesting the user to enable network positioning is done from
+                        // getLocation() if needed
+                        Log.i(TAG, "Location provider disabled: " + s);
+                    }
+                });
     }
 
     /**
      * Retry connecting to Google Play Services API; this can be useful to do after it has been upgraded on the device.
      */
     public void reconnectGpsa() {
-        // FIXME: Should we try disconnecting first if we're already connected?
-
-        if (!locationClient.isConnected()) {
-            locationClient.connect();
+        if (locationClient.isConnected()) {
+            locationClient.disconnect();
         }
+
+        locationClient.connect();
     }
 
     private void repairGpscConnection(ConnectionResult problem) {
@@ -220,10 +264,7 @@ implements LocationListener, Closeable {
         }
 
         if (bestLocation == null && !isPositioningEnabled()) {
-            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            PendingIntent pendingIntent =
-                    PendingIntent.getActivity(widgetManager, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            widgetManager.setStatus("Click to enable network positioning", pendingIntent);
+            requestEnableNetworkPositioning();
             return null;
         }
 
@@ -243,13 +284,20 @@ implements LocationListener, Closeable {
                 Math.round(bestLocation.getAccuracy())));
 
         if (ageMinutes > 150 && !isPositioningEnabled()) {
-            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-            PendingIntent pendingIntent =
-                    PendingIntent.getActivity(widgetManager, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            widgetManager.setStatus("Click to enable network positioning", pendingIntent);
+            requestEnableNetworkPositioning();
         }
 
         return bestLocation;
+    }
+
+    /**
+     * Ask user to enable network positioning.
+     */
+    private void requestEnableNetworkPositioning() {
+        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(widgetManager, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        widgetManager.setStatus("Click to enable network positioning", pendingIntent);
     }
 
     private void registerLocationListener(@NotNull WidgetManager widgetManager) {
