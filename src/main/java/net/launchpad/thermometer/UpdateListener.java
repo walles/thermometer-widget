@@ -141,6 +141,11 @@ implements LocationListener, Closeable {
     private void registerNetworkPositioningListener() {
         LocationManager locationManager =
                 (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager.getProvider(LocationManager.NETWORK_PROVIDER) == null) {
+            Log.w(TAG, "Network provider not available on this device");
+            return;
+        }
+
         locationManager.requestLocationUpdates(
                 LocationManager.NETWORK_PROVIDER,
                 30 * 60 * 1000,
@@ -269,7 +274,7 @@ implements LocationListener, Closeable {
         }
 
         if (bestLocation == null) {
-            Log.w(TAG, LocationManager.NETWORK_PROVIDER + " location is unknown");
+            Log.w(TAG, "Location is unknown");
 
             return null;
         }
