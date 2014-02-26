@@ -88,6 +88,11 @@ public class WidgetManager extends Service {
     private UpdateListener updateListener;
 
     /**
+     * Has the UI ever been updated?
+     */
+    private boolean uiUpdated = false;
+
+    /**
      * Must be accessed through {@link #getPreferences()}.
      */
     private SharedPreferences preferences;
@@ -409,14 +414,26 @@ public class WidgetManager extends Service {
      * Enqueue a widget display update.
      */
     public void updateUi() {
+        if (!uiUpdated) {
+            // The first time we do this in the foreground to get something on screen as soon as possible
+            Log.d(TAG, "Doing UI update in foreground the first time");
+            doUpdateUi();
+            uiUpdated = true;
+            return;
+        }
+
         boolean posted = handler.post(new Runnable() {
             @Override
             public void run() {
+                Log.d(TAG, "Now performing enqueued UI update");
                 doUpdateUi();
             }
         });
 
-        if (!posted) {
+        if (posted) {
+            Log.d(TAG, "Background UI update enqueued");
+        } else {
+            Log.w(TAG, "Enqueueing UI update failed, running in foreground");
             doUpdateUi();
         }
     }
