@@ -451,6 +451,12 @@ public class WidgetManager extends Service {
         }
         remoteViews.setOnClickPendingIntent(R.id.AllOfIt, pendingIntent);
 
+        updateUi(remoteViews);
+
+        Log.d(TAG, "UI updated");
+    }
+
+    private void updateUi(RemoteViews remoteViews) {
         AppWidgetManager appWidgetManager =
                 AppWidgetManager.getInstance(this);
         assert appWidgetManager != null;
@@ -465,8 +471,6 @@ public class WidgetManager extends Service {
                 appWidgetManager.updateAppWidget(widgetId, remoteViews);
             }
         }
-
-        Log.d(TAG, "UI updated");
     }
 
     /**
@@ -478,22 +482,15 @@ public class WidgetManager extends Service {
     private void onUpdateInternal(Intent intent) {
         Log.d(TAG, "onUpdate() called");
 
-        boolean starting = false;
         synchronized (weatherLock) {
             if (updateListener == null) {
                 Log.d(TAG, "Have no update listener, registering a new one");
                 updateListener = new UpdateListener(this);
-                starting = true;
             } else {
                 Log.d(TAG, "Not touching existing update listener");
             }
 
             setPeriodicUpdatesEnabled(true);
-        }
-
-        if (starting) {
-            // Show some UI as quickly as possible
-            doUpdateUi();
         }
 
         // Schedule a temperature update

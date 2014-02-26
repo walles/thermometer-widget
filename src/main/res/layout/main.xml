@@ -9,5 +9,6 @@
         android:id="@+id/Bitmap"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:contentDescription="Temperature with optional metadata"/>
+        android:contentDescription="Temperature with optional metadata"
+        android:src="@drawable/icon"/>
 </LinearLayout>
