@@ -103,7 +103,7 @@ public class WeatherPresenter {
         // FIXME: Refactor this method to be readable
         RemoteViews remoteViews =
                 new RemoteViews(ThermometerWidget.class.getPackage().getName(),
-                        R.layout.main);
+                        R.layout.widget_main);
 
         final int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
 
