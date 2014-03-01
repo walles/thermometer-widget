@@ -29,7 +29,6 @@ import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -45,12 +44,8 @@ import org.jetbrains.annotations.Nullable;
  * @author johan.walles@gmail.com
  */
 public class ThermometerConfigure extends PreferenceFragment {
-    /**
-     * Request code for text color.
-     */
     private ColorPicker colorPicker;
-    @NotNull
-    private Preference colorPreference;
+    @NotNull private View colorPickerView;
 
     @Nullable
     @Override
@@ -87,16 +82,16 @@ public class ThermometerConfigure extends PreferenceFragment {
             }
         });
 
-        setUpColorPreference();
+        setUpColorPreferences();
     }
 
-    private void setUpColorPreference() {
-        // Set up the text color preference
+    private void setUpColorPreferences() {
         final Activity activity = getActivity();
         assert activity != null;
 
-        final View colorPickerView = activity.getLayoutInflater().inflate(R.layout.color_picker, null);
-        assert colorPickerView != null;
+        View view = activity.getLayoutInflater().inflate(R.layout.color_picker, null);
+        assert view != null;
+        colorPickerView = view;
 
         colorPicker = (ColorPicker)colorPickerView.findViewById(R.id.picker);
 
@@ -104,15 +99,24 @@ public class ThermometerConfigure extends PreferenceFragment {
         SVBar svBar = (SVBar)colorPickerView.findViewById(R.id.svbar);
         colorPicker.addSVBar(svBar);
 
-        Preference preference = findPreference("textColorPref");
-        assert preference != null;
-        colorPreference = preference;
+        attachColorPicker("textColorPref");
+    }
+
+    /**
+     * Attach a color picker to a named preference.
+     */
+    private void attachColorPicker(@NotNull String colorPreferenceName) {
+        Preference colorPreference = findPreference(colorPreferenceName);
+        assert colorPreference != null;
 
         final SharedPreferences preferences = colorPreference.getSharedPreferences();
         assert preferences != null;
 
         int initialColor = preferences.getInt(colorPreference.getKey(), Color.WHITE);
-        setColorPreferenceSummary(initialColor);
+        setColorPreferenceSummary(colorPreference, initialColor);
+
+        final Activity activity = getActivity();
+        assert activity != null;
 
         colorPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
@@ -120,7 +124,7 @@ public class ThermometerConfigure extends PreferenceFragment {
                 int currentColor = preferences.getInt(preference.getKey(), Color.WHITE);
 
                 // Inspired by http://stackoverflow.com/questions/6526874/call-removeview-on-the-childs-parent-first
-                ViewGroup parent = (ViewGroup)colorPickerView.getParent();
+                ViewGroup parent = (ViewGroup) colorPickerView.getParent();
                 if (parent != null) {
                     parent.removeView(colorPickerView);
                 }
@@ -133,7 +137,7 @@ public class ThermometerConfigure extends PreferenceFragment {
                 aBuilder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
-                        setColor(colorPicker.getColor());
+                        setColor(preference, colorPicker.getColor());
                     }
                 });
                 aBuilder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
@@ -146,15 +150,14 @@ public class ThermometerConfigure extends PreferenceFragment {
                 return true;
             }
         });
-
     }
 
-    private void setColorPreferenceSummary(int color) {
+    private void setColorPreferenceSummary(Preference colorPreference,  int color) {
         String colorString = String.format("0x%06x", color & 0xffffff);
-        colorPreference.setSummary("Current color: " + colorString);
+        colorPreference.setSummary("Color: " + colorString);
     }
 
-    private void setColor(int color) {
+    private void setColor(Preference colorPreference, int color) {
         SharedPreferences sharedPreferences = colorPreference.getSharedPreferences();
         assert sharedPreferences != null;
 
@@ -164,11 +167,11 @@ public class ThermometerConfigure extends PreferenceFragment {
                         .putInt(colorPreference.getKey(), color)
                         .commit();
         if (!colorUpdated) {
-            Log.e(TAG, String.format("Failed to commit color preference change: 0x%06x", color));
+            Log.e(TAG, String.format("Failed to commit %s change: 0x%06x", colorPreference.getKey(), color));
             return;
         }
-        Log.d(TAG, String.format("New color picked: 0x%06x", color));
+        Log.d(TAG, String.format("New color picked: %s=0x%06x", colorPreference.getKey(), color));
 
-        setColorPreferenceSummary(color);
+        setColorPreferenceSummary(colorPreference, color);
     }
 }
