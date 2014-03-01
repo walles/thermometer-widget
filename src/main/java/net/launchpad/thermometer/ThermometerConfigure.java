@@ -69,9 +69,6 @@ public class ThermometerConfigure extends PreferenceFragment {
         final Activity activity = getActivity();
         assert activity != null;
 
-        // Fill in unset preferences from defaults
-        PreferenceManager.setDefaultValues(activity, R.xml.preferences, false);
-
         // Set up the temperature unit selection list
         ListPreference temperatureUnits =
             (ListPreference)findPreference("temperatureUnitPref");

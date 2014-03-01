@@ -503,6 +503,9 @@ public class WidgetManager extends Service {
             if (updateListener == null) {
                 Log.d(TAG, "Have no update listener, registering a new one");
                 updateListener = new UpdateListener(this);
+
+                // Fill in unset preferences from defaults
+                PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
             } else {
                 Log.d(TAG, "Not touching existing update listener");
             }
