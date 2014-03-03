@@ -11,7 +11,7 @@
       android:key="windChillPref"
       android:title="Wind Chill"
       android:defaultValue="false"
-      android:summaryOn="Wind chill adjusted temperatures are marked with *"
+      android:summaryOn="Wind chilled temperatures are marked with *, or + if cross freezing point"
       android:summaryOff="No wind chill calculations are done"/>
    <CheckBoxPreference 
       android:key="showMetadataPref"

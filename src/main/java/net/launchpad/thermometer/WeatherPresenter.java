@@ -254,6 +254,7 @@ public class WeatherPresenter {
 
     private void updateStrings() {
         boolean windChillComputed = false;
+        boolean windChilledAcrossFreezing = false;
 
         String degrees = "--";
         if (weather != null) {
@@ -285,21 +286,30 @@ public class WeatherPresenter {
 
             int unchilledDegrees;
             int chilledDegrees;
+            int freezingPoint;
             if (useCelsius) {
                 chilledDegrees = weather.getCentigrades(withWindChill);
                 unchilledDegrees = weather.getCentigrades(false);
+                freezingPoint = 0;
             } else {
                 // Liberian users and some others
                 chilledDegrees = weather.getFahrenheit(withWindChill);
                 unchilledDegrees = weather.getFahrenheit(false);
+                freezingPoint = 32;
             }
             degrees = Integer.toString(chilledDegrees);
             windChillComputed = (chilledDegrees != unchilledDegrees);
+            windChilledAcrossFreezing =
+                    (windChillComputed
+                            && unchilledDegrees > freezingPoint
+                            && chilledDegrees < freezingPoint);
         } else {
             subtextString = excuse;
         }
 
-        if (windChillComputed) {
+        if (windChilledAcrossFreezing) {
+            temperatureString = degrees + "+";
+        } else if (windChillComputed) {
             temperatureString = degrees + "*";
         } else {
             temperatureString = degrees + "°";
