@@ -74,7 +74,7 @@ public class WidgetManager extends Service {
     @SuppressLint("SdCardPath")
     private final String TRACE_FILE_NAME = "/data/data/net.launchpad.thermometer/johan.trace";
 
-    private Handler handler = new Handler();
+    private final Handler handler = new Handler();
 
     /**
      * Used for tagging update intents with why they were sent.

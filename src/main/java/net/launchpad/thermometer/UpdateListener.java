@@ -219,6 +219,7 @@ implements LocationListener, Closeable {
      *
      * @return True if network positioning is enabled.  False otherwise.
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean isPositioningEnabled() {
         LocationManager locationManager =
                 (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);

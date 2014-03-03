@@ -203,6 +203,7 @@ public class TemperatureFetcher extends Thread implements Callback {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean hasDataConnectivity() {
         ConnectivityManager connectivityManager =
                 (ConnectivityManager)widgetManager.getSystemService(Context.CONNECTIVITY_SERVICE);
