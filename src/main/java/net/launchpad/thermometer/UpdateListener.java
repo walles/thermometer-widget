@@ -101,6 +101,11 @@ implements LocationListener, Closeable {
             public void onDisconnected() {
                 Log.i(TAG, "Disconnected from location service");
                 widgetManager.setStatus("Location service disconnected");
+
+                if (!closed) {
+                    Log.w(TAG, "Disconnected but not shutting down, reconnecting...");
+                    reconnectGpsa();
+                }
             }
         }, new GooglePlayServicesClient.OnConnectionFailedListener() {
             @Override
@@ -220,7 +225,7 @@ implements LocationListener, Closeable {
      * @return True if network positioning is enabled.  False otherwise.
      */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private boolean isPositioningEnabled() {
+    private boolean isNetworkPositioningEnabled() {
         LocationManager locationManager =
                 (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
         return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
@@ -235,11 +240,20 @@ implements LocationListener, Closeable {
     public Location getLocation() {
         Location bestLocation;
 
+        String locationClientStatus;
+        if (locationClient.isConnected()) {
+            locationClientStatus = "connected";
+        } else if (locationClient.isConnecting()) {
+            locationClientStatus = "connecting";
+        } else {
+            locationClientStatus = "disconnected";
+        }
+
         Location lastKnownLocation = null;
         if (locationClient.isConnected()) {
             lastKnownLocation = locationClient.getLastLocation();
         } else {
-            Log.w(TAG, "Location client not connected");
+            Log.w(TAG, "Location client " + locationClientStatus);
         }
 
         if (lastKnownLocation == null && cachedLocation == null) {
@@ -269,13 +283,15 @@ implements LocationListener, Closeable {
             bestLocation.setTime(System.currentTimeMillis());
         }
 
-        if (bestLocation == null && !isPositioningEnabled()) {
+        if (bestLocation == null && !isNetworkPositioningEnabled()) {
             requestEnableNetworkPositioning();
             return null;
         }
 
         if (bestLocation == null) {
-            Log.w(TAG, "Location is unknown");
+            Log.w(TAG, String.format("Location is unknown, location client is %s, network positioning is %s",
+                    locationClientStatus,
+                    isNetworkPositioningEnabled() ? "enabled" : "disabled"));
 
             return null;
         }
@@ -289,7 +305,7 @@ implements LocationListener, Closeable {
                 bestLocation.getLongitude(),
                 Math.round(bestLocation.getAccuracy())));
 
-        if (ageMinutes > 150 && !isPositioningEnabled()) {
+        if (ageMinutes > 150 && !isNetworkPositioningEnabled()) {
             requestEnableNetworkPositioning();
         }
 
