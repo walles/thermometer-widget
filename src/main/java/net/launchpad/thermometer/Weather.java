@@ -5,6 +5,7 @@ import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +25,7 @@ public class Weather {
      * Used by {@link #toString()}.
      */
     private static final SimpleDateFormat FORMATTER =
-            new SimpleDateFormat("yyyy MMM dd hh:mm zz");
+            new SimpleDateFormat("yyyy MMM dd hh:mm zz", Locale.ENGLISH);
 
     /**
      * The temperature in Celsius.
@@ -322,7 +323,7 @@ public class Weather {
         } else {
             timeString = "<null>";
         }
-        return String.format("%.1fC, %.1fkts at %s on %s",
+        return String.format(Locale.ENGLISH, "%.1fC, %.1fkts at %s on %s",
             centigrades, windKnots, stationName, timeString);
     }
 
