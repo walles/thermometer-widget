@@ -25,6 +25,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.provider.Settings;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
@@ -47,7 +48,10 @@ import java.util.Map;
  * Listens for events and requests widget updates as required.
  */
 public class UpdateListener
-implements LocationListener, Closeable {
+implements LocationListener, Closeable
+{
+    private Handler handler = new Handler();
+
     private boolean closed = false;
 
     /**
@@ -117,7 +121,7 @@ implements LocationListener, Closeable {
                 }
             }
         });
-        locationClient.connect();
+        reconnectGpsa();
 
         Log.d(TAG, "Registering preferences change notification listener");
         preferenceChangeListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -190,11 +194,24 @@ implements LocationListener, Closeable {
      * Retry connecting to Google Play Services API; this can be useful to do after it has been upgraded on the device.
      */
     public void reconnectGpsa() {
-        if (locationClient.isConnected()) {
+        if (locationClient.isConnecting() || locationClient.isConnected()) {
             locationClient.disconnect();
         }
 
-        locationClient.connect();
+        try {
+            locationClient.connect();
+        } catch (Exception e) {
+            Log.w(TAG, "Connecting to GPSA failed, retrying in 5...", e);
+            widgetManager.setStatus("Waiting for location service...");
+
+            Runnable reconnect = new Runnable() {
+                @Override
+                public void run() {
+                    reconnectGpsa();
+                }
+            };
+            handler.postDelayed(reconnect, 5000);
+        }
     }
 
     private void repairGpscConnection(ConnectionResult problem) {
