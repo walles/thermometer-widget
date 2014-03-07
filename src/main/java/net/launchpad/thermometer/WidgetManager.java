@@ -57,6 +57,9 @@ import org.jetbrains.annotations.Nullable;
 // Need to suppress warning about GENERATE_TRACEFILES always being false / true
 @SuppressWarnings("ConstantConditions")
 public class WidgetManager extends Service {
+    final long t0;
+    int display_or_timer_count = 0;
+
     /**
      * Enable this to generate a trace file from when the widget is added to when it is removed.
      *
@@ -142,6 +145,8 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
+        t0 = System.currentTimeMillis();
+
         if (GENERATE_TRACEFILES) {
             Debug.startMethodTracing(TRACE_FILE_NAME);
         }
@@ -548,6 +553,20 @@ public class WidgetManager extends Service {
                 Log.i(TAG, "Ignoring Google Play Services API change");
             }
             return;
+        }
+
+        if (why == UpdateReason.DISPLAY_OR_TIMER) {
+            // This can mean another widget was added; make sure it's fresh
+            display_or_timer_count++;
+            long dtHours = (System.currentTimeMillis() - t0) / (1000 * 60 * 60);
+            if (dtHours == 0) {
+                dtHours = 1;
+            }
+            Log.d(TAG, String.format("%d display updates in %dh at %f updates/hour",
+                    display_or_timer_count,
+                    dtHours,
+                    display_or_timer_count / (double)dtHours));
+            updateUi();
         }
 
         updateMeasurement(why);
