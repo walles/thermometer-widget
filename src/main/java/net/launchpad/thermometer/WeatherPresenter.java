@@ -28,6 +28,7 @@ public class WeatherPresenter {
     private boolean dirty = true;
     private @NotNull String temperatureString;
     private @NotNull String subtextString;
+    private boolean windChilledAcrossFreezing;
 
     private @Nullable final Weather weather;
     private @NotNull final String excuse;
@@ -64,6 +65,14 @@ public class WeatherPresenter {
         }
 
         return subtextString;
+    }
+
+    public boolean isWindChilledAcrossFreezing() {
+        if (dirty) {
+            updateStrings();
+        }
+
+        return windChilledAcrossFreezing;
     }
 
     public void setShowMetadata(boolean showMetadata) {
@@ -127,7 +136,9 @@ public class WeatherPresenter {
         float textSize = TEMPERATURE_HEIGHT;
         Paint temperaturePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         temperaturePaint.setTextSize(textSize);
-        temperaturePaint.setTypeface(Typeface.DEFAULT_BOLD);
+        int temperatureStyle = isWindChilledAcrossFreezing() ? Typeface.BOLD_ITALIC : Typeface.BOLD;
+        Typeface temperatureTypeface = Typeface.create(Typeface.DEFAULT, temperatureStyle);
+        temperaturePaint.setTypeface(temperatureTypeface);
         Rect bounds = new Rect();
         temperaturePaint.getTextBounds(getTemperatureString(), 0, getTemperatureString().length(), bounds);
         float wFactor = WIDTH / (float)bounds.width();
@@ -254,7 +265,7 @@ public class WeatherPresenter {
 
     private void updateStrings() {
         boolean windChillComputed = false;
-        boolean windChilledAcrossFreezing = false;
+        windChilledAcrossFreezing = false;
 
         String degrees = "--";
         if (weather != null) {
@@ -292,11 +303,12 @@ public class WeatherPresenter {
                 unchilledDegrees = weather.getCentigrades(false);
                 freezingPoint = 0;
             } else {
-                // Liberian users and some others
+                // In Liberia, they use Fahrenheit
                 chilledDegrees = weather.getFahrenheit(withWindChill);
                 unchilledDegrees = weather.getFahrenheit(false);
                 freezingPoint = 32;
             }
+
             degrees = Integer.toString(chilledDegrees);
             windChillComputed = (chilledDegrees != unchilledDegrees);
             windChilledAcrossFreezing =
@@ -307,9 +319,7 @@ public class WeatherPresenter {
             subtextString = excuse;
         }
 
-        if (windChilledAcrossFreezing) {
-            temperatureString = degrees + "+";
-        } else if (windChillComputed) {
+        if (windChillComputed) {
             temperatureString = degrees + "*";
         } else {
             temperatureString = degrees + "°";
