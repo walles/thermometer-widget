@@ -155,6 +155,10 @@ public class ThermometerLogViewer extends Fragment {
             builder.append("Device description:\n");
             builder.append(getDeviceDescription());
 
+            builder.append("\nGoogle Play Services version: ");
+            builder.append(getVersion("com.google.android.gms"));
+            builder.append("\n");
+
             builder.append(getStoredLogs());
 
             builder.append("\n");
@@ -257,8 +261,7 @@ public class ThermometerLogViewer extends Fragment {
     }
 
     @NotNull
-    private String getEmailSubject() {
-        String versionName;
+    private String getVersion(@NotNull String packageName) {
         try {
             Activity activity = getActivity();
             assert activity != null;
@@ -266,12 +269,20 @@ public class ThermometerLogViewer extends Fragment {
             final PackageManager packageManager = activity.getPackageManager();
             assert packageManager != null;
 
-            final PackageInfo packageInfo = packageManager.getPackageInfo(activity.getPackageName(), 0);
-            versionName = packageInfo.versionName;
+            final PackageInfo packageInfo = packageManager.getPackageInfo(packageName, 0);
+            return packageInfo.versionName;
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Couldn't find my own version number", e);
-            versionName = "(unknown version)";
+            Log.e(TAG, "Couldn't find " + packageName + " version number", e);
+            return "(unknown version)";
         }
+    }
+
+    @NotNull
+    private String getEmailSubject() {
+        Activity activity = getActivity();
+        assert activity != null;
+
+        String versionName = getVersion(activity.getPackageName());
 
         return "Thermometer Widget " + versionName;
     }
