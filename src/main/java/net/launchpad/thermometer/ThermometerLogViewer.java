@@ -157,6 +157,8 @@ public class ThermometerLogViewer extends Fragment {
 
             builder.append("\nGoogle Play Services version: ");
             builder.append(getVersion("com.google.android.gms"));
+            builder.append("\nGoogle Play version: ");
+            builder.append(getVersion("com.android.vending"));
             builder.append("\n");
 
             builder.append(getStoredLogs());
