@@ -60,107 +60,6 @@ public class Weather {
     }
 
     /**
-     * Converts an UTC calendar to a calendar for the local time zone.
-     *
-     * @param utc An UTC calendar.
-     *
-     * @return A calendar representing the same time, but in the local time zone.
-     */
-    @NotNull
-    static Calendar toLocal(@NotNull Calendar utc) {
-        Calendar local = new GregorianCalendar();
-        local.setTimeInMillis(utc.getTimeInMillis());
-        return local;
-    }
-
-    /**
-     * Capitalize A String Like This.
-     *
-     * @param capitalizeMe A string to capitalize.
-     *
-     * @return A capitalized version of capitalizeMe.
-     */
-    @NotNull
-    private static String capitalize(@NotNull CharSequence capitalizeMe) {
-        StringBuilder builder = new StringBuilder(capitalizeMe.length());
-        boolean shouldCapitalize = true;
-        for (int i = 0; i < capitalizeMe.length(); i++) {
-            char current = capitalizeMe.charAt(i);
-
-            if (Character.isLetter(current)) {
-                if (shouldCapitalize) {
-                    builder.append(Character.toUpperCase(current));
-                } else {
-                    builder.append(Character.toLowerCase(current));
-                }
-                shouldCapitalize = false;
-            } else if (Character.isWhitespace(current)) {
-                builder.append(current);
-                shouldCapitalize = true;
-            } else {
-                builder.append(current);
-            }
-        }
-        return builder.toString();
-    }
-
-    /**
-     * Prettify a station name that we got from the Internet.
-     *
-     * @param ugly An ugly station name.
-     *
-     * @return A pretty station name.
-     */
-    @Nullable
-    private static String prettifyStationName(@Nullable String ugly) {
-        if (ugly == null) {
-            return null;
-        }
-
-        ugly = ugly.trim();
-        if (ugly.length() == 0) {
-            return null;
-        }
-
-        boolean hasUpper = false;
-        boolean hasLower = false;
-        for (int i = 0; i < ugly.length(); i++) {
-            char current = ugly.charAt(i);
-            if (Character.isUpperCase(current)) {
-                hasUpper = true;
-            } else if (Character.isLowerCase(current)) {
-                hasLower = true;
-            }
-        }
-        if (hasUpper && !hasLower) {
-            ugly = capitalize(ugly);
-        } else if (hasLower && !hasUpper) {
-            ugly = capitalize(ugly);
-        }
-
-        // Chop off any unfinished parenthesis
-        int leftParen = ugly.indexOf('(');
-        if (leftParen > 0 && ugly.indexOf(')') < 0) {
-            ugly = ugly.substring(0, leftParen);
-            ugly = ugly.trim();
-        }
-
-        // Convert "Coeur d'Alene, Coeur d'Alene Air Terminal"
-        //    into                "Coeur d'Alene Air Terminal"
-        int separatorIndex = ugly.indexOf(", ");
-        if (separatorIndex >= 0) {
-            String left = ugly.substring(0, separatorIndex);
-            String right = ugly.substring(separatorIndex + 2);
-            if (right.startsWith(left)) {
-                ugly = right;
-            }
-        }
-
-        // Ugly is now pretty
-        return ugly;
-    }
-
-    /**
      * Parse the weather from a JSON object.
      *
      * @param weatherObservation The (non-null) weather data.
@@ -185,7 +84,7 @@ public class Weather {
             if (weatherObservation.has("dt")) {
                 Calendar utc = new GregorianCalendar(TimeZone.getTimeZone("UTC"));
                 utc.setTimeInMillis(weatherObservation.getLong("dt") * 1000);
-                observationTime = toLocal(utc);
+                observationTime = Util.toLocal(utc);
                 Log.d(TAG, "New observation is " + getAgeMinutes() + " minutes old");
             } else {
                 observationTime = null;
@@ -193,7 +92,7 @@ public class Weather {
 
             if (weatherObservation.has("name")) {
                 String extractedStationName = weatherObservation.getString("name");
-                stationName = prettifyStationName(extractedStationName);
+                stationName = Util.prettifyStationName(extractedStationName);
             } else {
                 stationName = null;
             }

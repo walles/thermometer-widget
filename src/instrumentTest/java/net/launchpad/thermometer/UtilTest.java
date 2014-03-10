@@ -34,4 +34,25 @@ public class UtilTest extends TestCase {
         assertFalse(Util.isFahrenheit("Celsius"));
         assertFalse(Util.isFahrenheit(""));
     }
+
+    public void testCapitalize() {
+        assertEquals("Foo Bar", Util.capitalize("FOO BAR"));
+        assertEquals("Foo Bar", Util.capitalize("foo bar"));
+    }
+
+    public void testPrettifyStationName() {
+        assertNull(Util.prettifyStationName(null));
+        assertNull(Util.prettifyStationName(""));
+        assertNull(Util.prettifyStationName(" "));
+
+        assertEquals("Bromma flygplats", Util.prettifyStationName("Bromma flygplats"));
+
+        assertEquals("Bromma Flygplats", Util.prettifyStationName("BROMMA FLYGPLATS"));
+        assertEquals("Bromma Flygplats", Util.prettifyStationName("bromma flygplats"));
+
+        assertEquals("Bromma flygplats", Util.prettifyStationName("Bromma, Bromma flygplats"));
+
+        assertEquals("Bromma flygplats", Util.prettifyStationName("Bromma flygplats (hej"));
+        assertEquals("Bromma flygplats (hej)", Util.prettifyStationName("Bromma flygplats (hej)"));
+    }
 }
