@@ -241,11 +241,20 @@ implements LocationListener, Closeable
      *
      * @return True if network positioning is enabled.  False otherwise.
      */
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    private boolean isNetworkPositioningEnabled() {
+    @NotNull
+    private ProviderStatus getNetworkPositioningStatus() {
         LocationManager locationManager =
                 (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
-        return locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        if (locationManager.getProvider(LocationManager.NETWORK_PROVIDER) == null) {
+            return ProviderStatus.UNAVAILABLE;
+        }
+
+        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            return ProviderStatus.ENABLED;
+        }
+
+        return ProviderStatus.DISABLED;
     }
 
     /**
@@ -300,7 +309,7 @@ implements LocationListener, Closeable
             bestLocation.setTime(System.currentTimeMillis());
         }
 
-        if (bestLocation == null && !isNetworkPositioningEnabled()) {
+        if (bestLocation == null && getNetworkPositioningStatus() == ProviderStatus.DISABLED) {
             requestEnableNetworkPositioning();
             return null;
         }
@@ -308,7 +317,7 @@ implements LocationListener, Closeable
         if (bestLocation == null) {
             Log.w(TAG, String.format("Location is unknown, location client is %s, network positioning is %s",
                     locationClientStatus,
-                    isNetworkPositioningEnabled() ? "enabled" : "disabled"));
+                    getNetworkPositioningStatus().toString()));
 
             return null;
         }
@@ -322,7 +331,7 @@ implements LocationListener, Closeable
                 bestLocation.getLongitude(),
                 Math.round(bestLocation.getAccuracy())));
 
-        if (ageMinutes > 150 && !isNetworkPositioningEnabled()) {
+        if (ageMinutes > 150 && getNetworkPositioningStatus() == ProviderStatus.DISABLED) {
             requestEnableNetworkPositioning();
         }
 
@@ -423,5 +432,11 @@ implements LocationListener, Closeable
 
         // Take a new measurement at our new location
         widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
+    }
+
+    private enum ProviderStatus {
+        UNAVAILABLE,
+        DISABLED,
+        ENABLED
     }
 }
