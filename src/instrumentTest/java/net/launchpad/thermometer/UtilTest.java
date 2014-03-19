@@ -25,6 +25,13 @@ public class UtilTest extends TestCase {
         assertEquals("2 years old", Util.minutesToTimeOldString((int) (60 * 24 * 365.25 * 2)));
     }
 
+    public void testMsToTimeString() {
+        assertEquals("9999ms", Util.msToTimeString(9999));
+        assertEquals("10s", Util.msToTimeString(10 * 1000));
+        assertEquals("119s", Util.msToTimeString(119999));
+        assertEquals("2 minutes", Util.msToTimeString(120 * 1000));
+    }
+
     public void testIsFahrenheit() {
         // We used to have this mis-spelled
         assertTrue(Util.isFahrenheit("Farenheit"));

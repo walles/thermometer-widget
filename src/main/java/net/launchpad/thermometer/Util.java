@@ -20,8 +20,6 @@ public final class Util {
 
     /**
      * Convert a number of minutes to a string like "3 days old".  Resolutions goes from minutes to years.
-     * <p>
-     * Has default protection for testing purposes.
      *
      * @param ageMinutes The number of minutes.
      *
@@ -37,27 +35,49 @@ public final class Util {
             return "current";
         }
 
+        return msToTimeString(ageMinutes * 60L * 1000) + " old";
+    }
+
+    /**
+     * Convert a number of milliseconds to a string like "3s" or "12 days".
+     *
+     * @param ms A number of milliseconds
+     *
+     * @return A string like "9 years"
+     */
+    @NotNull
+    public static String msToTimeString(long ms) {
+        if (ms < 10000) {
+            return ms + "ms";
+        }
+
+        if (ms < 120 * 1000) {
+            return (ms / 1000) + "s";
+        }
+
+        long ageMinutes = ms / (60 * 1000);
+
         if (ageMinutes < 60 * 2) {
-            return ageMinutes + " minutes old";
+            return ageMinutes + " minutes";
         }
 
         if (ageMinutes < 60 * 24 * 2) {
-            return ageMinutes / 60 + " hours old";
+            return ageMinutes / 60 + " hours";
         }
 
         if (ageMinutes < 60 * 24 * 7 * 2) {
-            return ageMinutes / (60 * 24) + " days old";
+            return ageMinutes / (60 * 24) + " days";
         }
 
         if (ageMinutes < 60 * 24 * (365.25 / 12) * 2) {
-            return ageMinutes / (60 * 24 * 7) + " weeks old";
+            return ageMinutes / (60 * 24 * 7) + " weeks";
         }
 
         if (ageMinutes < 60 * 24 * 365.25 * 2) {
-            return ((int)(ageMinutes / (60 * 24 * (365.25 / 12)))) + " months old";
+            return ((int)(ageMinutes / (60 * 24 * (365.25 / 12)))) + " months";
         }
 
-        return ((int)(ageMinutes / (60 * 24 * 365.25))) + " years old";
+        return ((int)(ageMinutes / (60 * 24 * 365.25))) + " years";
     }
 
     /**
