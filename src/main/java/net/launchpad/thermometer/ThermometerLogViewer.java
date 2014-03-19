@@ -5,8 +5,8 @@ import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Fragment;
-import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -37,6 +37,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Shows the Thermometer Widget logs.
@@ -91,10 +93,7 @@ public class ThermometerLogViewer extends Fragment {
          * @return The log file contents
          */
         private @NotNull CharSequence getStoredLogs() {
-            Activity activity = getActivity();
-            assert activity != null;
-
-            File logdir = getActivity().getDir("logs", Activity.MODE_PRIVATE);
+            File logdir = getNonNullActivity().getDir("logs", Activity.MODE_PRIVATE);
             File[] files = logdir.listFiles();
             assert files != null;
 
@@ -156,14 +155,16 @@ public class ThermometerLogViewer extends Fragment {
             builder.append("Device description:\n");
             builder.append(getDeviceDescription());
 
+            builder.append("\n");
+            builder.append("Installed:\n");
+            builder.append(listInstalledPackages());
+
             builder.append("\nGoogle Play Services version: ");
             builder.append(getVersion("com.google.android.gms"));
             builder.append("\nGoogle Play version: ");
             builder.append(getVersion("com.android.vending"));
             builder.append("\nNetwork positioning is ");
-            Context context = getActivity();
-            assert context != null;
-            builder.append(Util.getNetworkPositioningStatus(context));
+            builder.append(Util.getNetworkPositioningStatus(getNonNullActivity()));
             builder.append("\n");
 
             builder.append(getStoredLogs());
@@ -236,15 +237,12 @@ public class ThermometerLogViewer extends Fragment {
             return null;
         }
 
-        Activity activity = getActivity();
-        assert activity != null;
-
         // Dump log view contents into a file
         Writer out;
         try {
             //noinspection deprecation
             out = new OutputStreamWriter(
-                    activity.openFileOutput(LOG_DUMP_FILENAME, Activity.MODE_WORLD_READABLE));
+                    getNonNullActivity().openFileOutput(LOG_DUMP_FILENAME, Activity.MODE_WORLD_READABLE));
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Unable to open log dump file for writing", e);
             return null;
@@ -263,17 +261,14 @@ public class ThermometerLogViewer extends Fragment {
             }
         }
 
-        File file = new File(activity.getFilesDir(), LOG_DUMP_FILENAME);
+        File file = new File(getNonNullActivity().getFilesDir(), LOG_DUMP_FILENAME);
         return Uri.fromFile(file);
     }
 
     @NotNull
     private String getVersion(@NotNull String packageName) {
         try {
-            Activity activity = getActivity();
-            assert activity != null;
-
-            final PackageManager packageManager = activity.getPackageManager();
+            final PackageManager packageManager = getNonNullActivity().getPackageManager();
             assert packageManager != null;
 
             final PackageInfo packageInfo = packageManager.getPackageInfo(packageName, 0);
@@ -286,15 +281,12 @@ public class ThermometerLogViewer extends Fragment {
 
     @NotNull
     private String getEmailSubject() {
-        Activity activity = getActivity();
-        assert activity != null;
-
-        String versionName = getVersion(activity.getPackageName());
+        String versionName = getVersion(getNonNullActivity().getPackageName());
 
         return "Thermometer Widget " + versionName;
     }
 
-    private String getDeviceDescription() {
+    private CharSequence getDeviceDescription() {
         StringWriter text = new StringWriter();
 
         @SuppressWarnings("IOResourceOpenedButNotSafelyClosed")
@@ -311,10 +303,45 @@ public class ThermometerLogViewer extends Fragment {
             } catch (IllegalAccessException ignored) {
                 continue;
             }
-            textWriter.format("%s: %s\n", field.getName(), value);
+            textWriter.format("  %s: %s\n", field.getName(), value);
         }
 
-        return text.toString();
+        return text.getBuffer();
+    }
+
+    private CharSequence listInstalledPackages() {
+        final PackageManager packageManager = getNonNullActivity().getPackageManager();
+        assert packageManager != null;
+
+        SortedSet<String> packages = new TreeSet<String>();
+        for (PackageInfo packageInfo : packageManager.getInstalledPackages(0)) {
+            ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+            CharSequence applicationName = null;
+            if (applicationInfo != null) {
+                applicationName = packageInfo.applicationInfo.loadLabel(packageManager);
+            }
+
+            StringBuilder builder = new StringBuilder();
+            if (applicationName != null && applicationName.length() > 0) {
+                builder.append(applicationName);
+            } else {
+                builder.append(packageInfo.packageName);
+            }
+
+            builder.append(" ");
+            builder.append(packageInfo.versionName);
+
+            packages.add(builder.toString());
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (String packageInfo : packages) {
+            builder.append("  ");
+            builder.append(packageInfo);
+            builder.append("\n");
+        }
+
+        return builder.toString();
     }
 
     private void emailDeveloper() {
@@ -337,5 +364,12 @@ public class ThermometerLogViewer extends Fragment {
         intent.putExtra(Intent.EXTRA_STREAM, uri);
 
         startActivity(Intent.createChooser(intent, "Report Problem"));
+    }
+
+    @NotNull
+    public Activity getNonNullActivity() {
+        Activity activity = getActivity();
+        assert activity != null;
+        return activity;
     }
 }
