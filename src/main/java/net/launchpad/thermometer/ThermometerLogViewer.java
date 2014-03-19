@@ -267,15 +267,23 @@ public class ThermometerLogViewer extends Fragment {
 
     @NotNull
     private String getVersion(@NotNull String packageName) {
+        PackageInfo packageInfo = getPackageInfo(packageName);
+        if (packageInfo == null) {
+            return "(unknown version)";
+        }
+        return packageInfo.versionName;
+    }
+
+    @Nullable
+    private PackageInfo getPackageInfo(@NotNull String packageName) {
         try {
             final PackageManager packageManager = getNonNullActivity().getPackageManager();
             assert packageManager != null;
 
-            final PackageInfo packageInfo = packageManager.getPackageInfo(packageName, 0);
-            return packageInfo.versionName;
+            return packageManager.getPackageInfo(packageName, 0);
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Couldn't find " + packageName + " version number", e);
-            return "(unknown version)";
+            Log.e(TAG, "Couldn't find " + packageName, e);
+            return null;
         }
     }
 
