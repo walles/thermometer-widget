@@ -19,6 +19,7 @@
 package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
+import static net.launchpad.thermometer.Util.ProviderStatus;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -237,27 +238,6 @@ implements LocationListener, Closeable
     }
 
     /**
-     * Is network positioning enabled?
-     *
-     * @return True if network positioning is enabled.  False otherwise.
-     */
-    @NotNull
-    private ProviderStatus getNetworkPositioningStatus() {
-        LocationManager locationManager =
-                (LocationManager)widgetManager.getSystemService(Context.LOCATION_SERVICE);
-
-        if (locationManager.getProvider(LocationManager.NETWORK_PROVIDER) == null) {
-            return ProviderStatus.UNAVAILABLE;
-        }
-
-        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-            return ProviderStatus.ENABLED;
-        }
-
-        return ProviderStatus.DISABLED;
-    }
-
-    /**
      * Get the phone's last known location.
      *
      * @return the phone's last known location.
@@ -309,7 +289,7 @@ implements LocationListener, Closeable
             bestLocation.setTime(System.currentTimeMillis());
         }
 
-        if (bestLocation == null && getNetworkPositioningStatus() == ProviderStatus.DISABLED) {
+        if (bestLocation == null && Util.getNetworkPositioningStatus(widgetManager) == ProviderStatus.DISABLED) {
             requestEnableNetworkPositioning();
             return null;
         }
@@ -317,7 +297,7 @@ implements LocationListener, Closeable
         if (bestLocation == null) {
             Log.w(TAG, String.format("Location is unknown, location client is %s, network positioning is %s",
                     locationClientStatus,
-                    getNetworkPositioningStatus().toString()));
+                    Util.getNetworkPositioningStatus(widgetManager).toString()));
 
             return null;
         }
@@ -331,7 +311,7 @@ implements LocationListener, Closeable
                 bestLocation.getLongitude(),
                 Math.round(bestLocation.getAccuracy())));
 
-        if (ageMinutes > 150 && getNetworkPositioningStatus() == ProviderStatus.DISABLED) {
+        if (ageMinutes > 150 && Util.getNetworkPositioningStatus(widgetManager) == ProviderStatus.DISABLED) {
             requestEnableNetworkPositioning();
         }
 
@@ -432,11 +412,5 @@ implements LocationListener, Closeable
 
         // Take a new measurement at our new location
         widgetManager.updateMeasurement(UpdateReason.LOCATION_CHANGED);
-    }
-
-    private enum ProviderStatus {
-        UNAVAILABLE,
-        DISABLED,
-        ENABLED
     }
 }

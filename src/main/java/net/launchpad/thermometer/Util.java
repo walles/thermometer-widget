@@ -1,5 +1,7 @@
 package net.launchpad.thermometer;
 
+import android.content.Context;
+import android.location.LocationManager;
 import android.os.Build;
 import android.text.format.DateFormat;
 import org.jetbrains.annotations.NotNull;
@@ -210,5 +212,44 @@ public final class Util {
 
         // Ugly is now pretty
         return ugly;
+    }
+
+    /**
+     * Can network positioning be used on this device?
+     */
+    @NotNull
+    public static ProviderStatus getNetworkPositioningStatus(@NotNull Context context) {
+        LocationManager locationManager =
+                (LocationManager)context.getSystemService(Context.LOCATION_SERVICE);
+
+        if (locationManager.getProvider(LocationManager.NETWORK_PROVIDER) == null) {
+            return ProviderStatus.UNAVAILABLE;
+        }
+
+        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            return ProviderStatus.ENABLED;
+        }
+
+        return ProviderStatus.DISABLED;
+    }
+
+    /**
+     * @see #getNetworkPositioningStatus(Context)
+     */
+    public enum ProviderStatus {
+        /**
+         * Provider is not available on this device, don't confuse with {@link #DISABLED}.
+         */
+        UNAVAILABLE,
+
+        /**
+         * Provider can be enabled but is currently disabled.
+         */
+        DISABLED,
+
+        /**
+         * Provider is enabled.
+         */
+        ENABLED
     }
 }

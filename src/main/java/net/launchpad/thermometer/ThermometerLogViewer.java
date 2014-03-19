@@ -5,6 +5,7 @@ import static net.launchpad.thermometer.ThermometerWidget.TAG;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -159,6 +160,10 @@ public class ThermometerLogViewer extends Fragment {
             builder.append(getVersion("com.google.android.gms"));
             builder.append("\nGoogle Play version: ");
             builder.append(getVersion("com.android.vending"));
+            builder.append("\nNetwork positioning is ");
+            Context context = getActivity();
+            assert context != null;
+            builder.append(Util.getNetworkPositioningStatus(context));
             builder.append("\n");
 
             builder.append(getStoredLogs());
