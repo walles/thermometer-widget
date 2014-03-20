@@ -1,16 +1,24 @@
 package net.launchpad.thermometer;
 
 import android.content.Context;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.text.format.DateFormat;
+import android.util.Log;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 
+import static net.launchpad.thermometer.ThermometerWidget.TAG;
+
 public final class Util {
+    public static final String GOOGLE_PLAY_SERVICES_PACKAGE_NAME = "com.google.android.gms";
+    public static final String GOOGLE_PLAY_STORE_PACKAGE_NAME = "com.android.vending";
+
     /**
      * Uncallable constructor to keep people from instantiating this class.
      */
@@ -272,4 +280,22 @@ public final class Util {
          */
         ENABLED
     }
+
+    /**
+     * Get info about an installed package.
+     * @return Null if the package wasn't found.
+     */
+    @Nullable
+    public static PackageInfo getPackageInfo(@NotNull Context context, @NotNull String packageName) {
+        try {
+            final PackageManager packageManager = context.getPackageManager();
+            assert packageManager != null;
+
+            return packageManager.getPackageInfo(packageName, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.i(TAG, "Couldn't find " + packageName);
+            return null;
+        }
+    }
+
 }

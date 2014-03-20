@@ -10,7 +10,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
+import android.widget.TextView;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +35,29 @@ public class FixGpsaActivity extends Activity {
                 PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
         assert pendingIntent != null;
         return pendingIntent;
+    }
+
+    private void showNoGooglePlayStoreDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Google Play store missing");
+        builder.setMessage(Html.fromHtml(
+                "The store is needed for positioning, "
+                        + "<a href=\"https://answers.launchpad.net/thermometer/+faq/2498\">read more here</a>."));
+        builder.setIcon(android.R.drawable.ic_dialog_alert);
+        builder.setCancelable(false);
+        builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                finish();
+            }
+        });
+
+        Dialog dialog = builder.create();
+        dialog.show();
+
+        // Make links clickable, from http://stackoverflow.com/questions/1997328#answer-5458225
+        TextView messageView = (TextView)dialog.findViewById(android.R.id.message);
+        messageView.setMovementMethod(LinkMovementMethod.getInstance());
     }
 
     @Override
@@ -63,6 +89,12 @@ public class FixGpsaActivity extends Activity {
             Log.i(TAG, "GPSA error seems gone, asking widget to try again");
             WidgetManager.onUpdate(this, WidgetManager.UpdateReason.GPSA_RECONNECT);
             finish();
+            return;
+        }
+
+        if (Util.getPackageInfo(this, Util.GOOGLE_PLAY_STORE_PACKAGE_NAME) == null) {
+            Log.d(TAG, "Showing no-Google-Play-store dialog...");
+            showNoGooglePlayStoreDialog();
             return;
         }
 

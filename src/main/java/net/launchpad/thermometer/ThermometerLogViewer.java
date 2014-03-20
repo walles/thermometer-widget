@@ -164,9 +164,9 @@ public class ThermometerLogViewer extends Fragment {
             builder.append(listInstalledPackages());
 
             builder.append("\nGoogle Play Services version: ");
-            builder.append(getVersion("com.google.android.gms"));
-            builder.append("\nGoogle Play version: ");
-            builder.append(getVersion("com.android.vending"));
+            builder.append(getVersion(Util.GOOGLE_PLAY_SERVICES_PACKAGE_NAME));
+            builder.append("\nGoogle Play Store version: ");
+            builder.append(getVersion(Util.GOOGLE_PLAY_STORE_PACKAGE_NAME));
             builder.append("\nNetwork positioning is ");
             builder.append(Util.getNetworkPositioningStatus(getNonNullActivity()));
             builder.append("\n");
@@ -275,24 +275,11 @@ public class ThermometerLogViewer extends Fragment {
 
     @NotNull
     private String getVersion(@NotNull String packageName) {
-        PackageInfo packageInfo = getPackageInfo(packageName);
+        PackageInfo packageInfo = Util.getPackageInfo(getNonNullActivity(), packageName);
         if (packageInfo == null) {
             return "(unknown version)";
         }
         return packageInfo.versionName;
-    }
-
-    @Nullable
-    private PackageInfo getPackageInfo(@NotNull String packageName) {
-        try {
-            final PackageManager packageManager = getNonNullActivity().getPackageManager();
-            assert packageManager != null;
-
-            return packageManager.getPackageInfo(packageName, 0);
-        } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Couldn't find " + packageName, e);
-            return null;
-        }
     }
 
     @NotNull
@@ -359,7 +346,7 @@ public class ThermometerLogViewer extends Fragment {
     /**
      * Get information about a given PID. The information is retrieved from
      * <a href="http://linux.die.net/man/5/proc">/proc/[pid]/stat</a>.
-     * 
+     *
      * @return null if stats couldn't be retrieved.
      */
     @Nullable
