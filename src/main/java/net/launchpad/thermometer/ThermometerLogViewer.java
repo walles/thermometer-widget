@@ -4,7 +4,10 @@ import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.Fragment;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -13,6 +16,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -167,6 +171,10 @@ public class ThermometerLogViewer extends Fragment {
             builder.append(Util.getNetworkPositioningStatus(getNonNullActivity()));
             builder.append("\n");
 
+            builder.append("\n");
+            builder.append(getServiceCpuStats());
+
+            builder.append("\n");
             builder.append(getStoredLogs());
 
             builder.append("\n");
@@ -315,6 +323,111 @@ public class ThermometerLogViewer extends Fragment {
         }
 
         return text.getBuffer();
+    }
+
+    /**
+     * Get info about our widget service process.
+     *
+     * @return Null if no service info is found.
+     */
+    @Nullable
+    private ActivityManager.RunningServiceInfo getServiceInfo() {
+        ActivityManager activityManager =
+                (ActivityManager)getNonNullActivity().getSystemService(Context.ACTIVITY_SERVICE);
+        assert activityManager != null;
+
+        List<ActivityManager.RunningServiceInfo> runningServices = activityManager.getRunningServices(999);
+        assert runningServices != null;
+
+        String myPackageName = getNonNullActivity().getComponentName().getPackageName();
+        assert myPackageName != null;
+
+        for (ActivityManager.RunningServiceInfo serviceInfo : runningServices) {
+            ComponentName componentName = serviceInfo.service;
+            if (componentName == null) {
+                continue;
+            }
+            if (myPackageName.equals(componentName.getPackageName())) {
+                return serviceInfo;
+            }
+        }
+
+        // Not found
+        return null;
+    }
+
+    /**
+     * Get information about a given PID. The information is retrieved from
+     * <a href="http://linux.die.net/man/5/proc">/proc/[pid]/stat</a>.
+     * 
+     * @return null if stats couldn't be retrieved.
+     */
+    @Nullable
+    private String[] getPidStats(int pid) {
+        String statFileName = String.format("/proc/%d/stat", pid);
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(statFileName));
+            String line = reader.readLine();
+            if (line == null) {
+                Log.w(TAG, String.format("%s was empty", statFileName));
+                return null;
+            }
+            return line.split("\\s");
+        } catch (IOException e) {
+            Log.w(TAG, String.format("Reading %s failed", statFileName), e);
+            return null;
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    Log.w(TAG, String.format("Closing %s failed", statFileName), e);
+                }
+            }
+        }
+    }
+
+    private CharSequence getServiceCpuStats() {
+        ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
+        if (serviceInfo == null) {
+            return "Service not running (no RunningServiceInfo)";
+        }
+
+        int servicePid = serviceInfo.pid;
+        if (servicePid == 0) {
+            return "Service not running (no PID)";
+        }
+
+        float uptime = SystemClock.elapsedRealtime() - serviceInfo.activeSince;
+
+        String[] procPidStat = getPidStats(servicePid);
+        if (procPidStat == null) {
+            return "Stats unavailable for PID " + servicePid;
+        }
+        // Magic constants are from the Linux proc man page:
+        // http://linux.die.net/man/5/proc look for "/proc/[pid]/stat"
+        // The -1s are because the man page is one-based and the array indices are zero-based.
+        long userTicks = Long.valueOf(procPidStat[14 - 1]);
+        long kernelTicks = Long.valueOf(procPidStat[15 - 1]);
+
+        // FIXME: How can we find out the real value? 100 seems to be most common.
+        final float _SC_CLK_TCK = 100;
+        float userMs = (1000 * userTicks) / _SC_CLK_TCK;
+        float kernelMs = (1000 * kernelTicks) / _SC_CLK_TCK;
+
+        StringBuilder builder = new StringBuilder();
+        builder.append(String.format("Widget uptime: %s", Util.msToTimeString((long)uptime)));
+        builder.append(String.format("\nCPU seconds per hour uptime: %.1f (total=%s)",
+                3600 * (kernelMs + userMs) / uptime,
+                Util.msToTimeString((long)(kernelMs + userMs))));
+        builder.append(String.format("\nCPU seconds per hour uptime (usr): %.1f (total=%s)",
+                3600 * userMs / uptime,
+                Util.msToTimeString((long)userMs)));
+        builder.append(String.format("\nCPU seconds per hour uptime (sys): %.1f (total=%s)",
+                3600 * kernelMs / uptime,
+                Util.msToTimeString((long)kernelMs)));
+        return builder;
     }
 
     private CharSequence listInstalledPackages() {
