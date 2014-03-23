@@ -53,6 +53,8 @@ public class ThermometerLogViewer extends Fragment {
     private ScrollView verticalScrollView;
 
     private class ReadLogsTask extends AsyncTask<Void, Void, CharSequence> {
+        private StringBuilder report = new StringBuilder();
+
         private @NotNull CharSequence getCurrentLogs() {
             StringBuilder builder = new StringBuilder();
 
@@ -153,38 +155,59 @@ public class ThermometerLogViewer extends Fragment {
         @NotNull
         @Override
         protected CharSequence doInBackground(Void... voids) {
+            try {
+                fillInReport();
+            } catch (Exception e) {
+                Log.e(TAG, "Creating report failed", e);
+
+                StringWriter stringWriter = new StringWriter();
+                PrintWriter printWriter = new PrintWriter(stringWriter);
+                stringWriter.append("Reading logs failed, please report this:\n\n");
+                e.printStackTrace(printWriter);
+                printWriter.close();
+
+                report.append("\n\n");
+                report.append(stringWriter);
+            }
+
+            return report;
+        }
+
+        /**
+         * Fill in {@link #report}.
+         */
+        private CharSequence fillInReport() {
             long t0 = System.currentTimeMillis();
 
-            StringBuilder builder = new StringBuilder();
-            builder.append("Device description:\n");
-            builder.append(getDeviceDescription());
+            report.append("Device description:\n");
+            report.append(getDeviceDescription());
 
-            builder.append("\n");
-            builder.append("Installed:\n");
-            builder.append(listInstalledPackages());
+            report.append("\n");
+            report.append("Installed:\n");
+            report.append(listInstalledPackages());
 
-            builder.append("\nGoogle Play Services version: ");
-            builder.append(getVersion(Util.GOOGLE_PLAY_SERVICES_PACKAGE_NAME));
-            builder.append("\nGoogle Play Store version: ");
-            builder.append(getVersion(Util.GOOGLE_PLAY_STORE_PACKAGE_NAME));
-            builder.append("\nNetwork positioning is ");
-            builder.append(Util.getNetworkPositioningStatus(getNonNullActivity()));
-            builder.append("\n");
+            report.append("\nGoogle Play Services version: ");
+            report.append(getVersion(Util.GOOGLE_PLAY_SERVICES_PACKAGE_NAME));
+            report.append("\nGoogle Play Store version: ");
+            report.append(getVersion(Util.GOOGLE_PLAY_STORE_PACKAGE_NAME));
+            report.append("\nNetwork positioning is ");
+            report.append(Util.getNetworkPositioningStatus(getNonNullActivity()));
+            report.append("\n");
 
-            builder.append("\n");
-            builder.append(getServiceCpuStats());
+            report.append("\n");
+            report.append(getServiceCpuStats());
 
-            builder.append("\n");
-            builder.append(getStoredLogs());
+            report.append("\n");
+            report.append(getStoredLogs());
 
-            builder.append("\n");
-            builder.append("Current logs:\n");
-            builder.append(getCurrentLogs());
+            report.append("\n");
+            report.append("Current logs:\n");
+            report.append(getCurrentLogs());
 
             long t1 = System.currentTimeMillis();
             Log.d(TAG, String.format("Reading all logs took %dms", t1 - t0));
 
-            return builder;
+            return report;
         }
 
         @Override
