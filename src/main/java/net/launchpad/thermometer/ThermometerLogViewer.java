@@ -17,6 +17,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -318,14 +319,17 @@ public class ThermometerLogViewer extends Fragment {
                 }
 
                 StringBuilder builder = new StringBuilder();
-                if (applicationName != null && applicationName.length() > 0) {
-                    builder.append(applicationName);
-                } else {
-                    builder.append(packageInfo.packageName);
-                }
-
+                builder.append(packageInfo.packageName);
                 builder.append(" ");
-                builder.append(packageInfo.versionName);
+                builder.append(getVersion(packageInfo.packageName));
+
+                if (!TextUtils.isEmpty(applicationName)
+                        && !TextUtils.equals(applicationName, packageInfo.packageName))
+                {
+                    builder.append(" (");
+                    builder.append(applicationName);
+                    builder.append(")");
+                }
 
                 packages.add(builder.toString());
             }
@@ -435,6 +439,16 @@ public class ThermometerLogViewer extends Fragment {
         if (packageInfo == null) {
             return "(unknown version)";
         }
+
+        final long NOW = System.currentTimeMillis();
+        final long ONE_HOUR_MS = 1000L * 3600L;
+        if (NOW - packageInfo.lastUpdateTime < ONE_HOUR_MS) {
+            return packageInfo.versionName
+                    + " (since "
+                    + Util.msToTimeString(NOW - packageInfo.lastUpdateTime)
+                    + ")";
+        }
+
         return packageInfo.versionName;
     }
 
