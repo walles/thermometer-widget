@@ -224,6 +224,121 @@ public class ThermometerLogViewer extends Fragment {
 
             reportProblemButton.setEnabled(true);
         }
+
+        @NotNull
+        public Activity getNonNullActivity() {
+            Activity activity = getActivity();
+            assert activity != null;
+            return activity;
+        }
+
+        /**
+         * Get info about our widget service process.
+         *
+         * @return Null if no service info is found.
+         */
+        @Nullable
+        private ActivityManager.RunningServiceInfo getServiceInfo() {
+            ActivityManager activityManager =
+                    (ActivityManager)getNonNullActivity().getSystemService(Context.ACTIVITY_SERVICE);
+            assert activityManager != null;
+
+            List<ActivityManager.RunningServiceInfo> runningServices = activityManager.getRunningServices(999);
+            assert runningServices != null;
+
+            String myPackageName = getNonNullActivity().getComponentName().getPackageName();
+            assert myPackageName != null;
+
+            for (ActivityManager.RunningServiceInfo serviceInfo : runningServices) {
+                ComponentName componentName = serviceInfo.service;
+                if (componentName == null) {
+                    continue;
+                }
+                if (myPackageName.equals(componentName.getPackageName())) {
+                    return serviceInfo;
+                }
+            }
+
+            // Not found
+            return null;
+        }
+
+        private CharSequence getServiceCpuStats() {
+            ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
+            if (serviceInfo == null) {
+                return "Service not running (no RunningServiceInfo)";
+            }
+
+            int servicePid = serviceInfo.pid;
+            if (servicePid == 0) {
+                return "Service not running (no PID)";
+            }
+
+            float uptime = SystemClock.elapsedRealtime() - serviceInfo.activeSince;
+
+            String[] procPidStat = getPidStats(servicePid);
+            if (procPidStat == null) {
+                return "Stats unavailable for PID " + servicePid;
+            }
+            // Magic constants are from the Linux proc man page:
+            // http://linux.die.net/man/5/proc look for "/proc/[pid]/stat"
+            // The -1s are because the man page is one-based and the array indices are zero-based.
+            long userTicks = Long.valueOf(procPidStat[14 - 1]);
+            long kernelTicks = Long.valueOf(procPidStat[15 - 1]);
+
+            // FIXME: How can we find out the real value? 100 seems to be most common.
+            final float _SC_CLK_TCK = 100;
+            float userMs = (1000 * userTicks) / _SC_CLK_TCK;
+            float kernelMs = (1000 * kernelTicks) / _SC_CLK_TCK;
+
+            StringBuilder builder = new StringBuilder();
+            builder.append(String.format("Widget uptime: %s", Util.msToTimeString((long)uptime)));
+            builder.append(String.format("\nCPU seconds per hour uptime: %.1f (total=%s)",
+                    3600 * (kernelMs + userMs) / uptime,
+                    Util.msToTimeString((long)(kernelMs + userMs))));
+            builder.append(String.format("\nCPU seconds per hour uptime (usr): %.1f (total=%s)",
+                    3600 * userMs / uptime,
+                    Util.msToTimeString((long)userMs)));
+            builder.append(String.format("\nCPU seconds per hour uptime (sys): %.1f (total=%s)",
+                    3600 * kernelMs / uptime,
+                    Util.msToTimeString((long)kernelMs)));
+            return builder;
+        }
+
+        private CharSequence listInstalledPackages() {
+            final PackageManager packageManager = getNonNullActivity().getPackageManager();
+            assert packageManager != null;
+
+            SortedSet<String> packages = new TreeSet<String>();
+            for (PackageInfo packageInfo : packageManager.getInstalledPackages(0)) {
+                ApplicationInfo applicationInfo = packageInfo.applicationInfo;
+                CharSequence applicationName = null;
+                if (applicationInfo != null) {
+                    applicationName = packageInfo.applicationInfo.loadLabel(packageManager);
+                }
+
+                StringBuilder builder = new StringBuilder();
+                if (applicationName != null && applicationName.length() > 0) {
+                    builder.append(applicationName);
+                } else {
+                    builder.append(packageInfo.packageName);
+                }
+
+                builder.append(" ");
+                builder.append(packageInfo.versionName);
+
+                packages.add(builder.toString());
+            }
+
+            StringBuilder builder = new StringBuilder();
+            for (String packageInfo : packages) {
+                builder.append("  ");
+                builder.append(packageInfo);
+                builder.append("\n");
+            }
+
+            return builder.toString();
+        }
     }
 
     @Override
@@ -260,6 +375,9 @@ public class ThermometerLogViewer extends Fragment {
 
     private static final String LOG_DUMP_FILENAME = "thermometer_widget_log.txt";
 
+    /**
+     * Dump log view contents into a world-readable file and return its URI.
+     */
     @Nullable
     @SuppressLint("WorldReadableFiles")
     private Uri getEmailLogAttachmentUri() {
@@ -268,12 +386,18 @@ public class ThermometerLogViewer extends Fragment {
             return null;
         }
 
+        Activity activity = getActivity();
+        if (activity == null) {
+            Log.e(TAG, "Null activity, can't find work directorcy");
+            return null;
+        }
+
         // Dump log view contents into a file
         Writer out;
         try {
             //noinspection deprecation
             out = new OutputStreamWriter(
-                    getNonNullActivity().openFileOutput(LOG_DUMP_FILENAME, Activity.MODE_WORLD_READABLE));
+                    activity.openFileOutput(LOG_DUMP_FILENAME, Activity.MODE_WORLD_READABLE));
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Unable to open log dump file for writing", e);
             return null;
@@ -292,13 +416,22 @@ public class ThermometerLogViewer extends Fragment {
             }
         }
 
-        File file = new File(getNonNullActivity().getFilesDir(), LOG_DUMP_FILENAME);
+        File file = new File(activity.getFilesDir(), LOG_DUMP_FILENAME);
         return Uri.fromFile(file);
     }
 
     @NotNull
-    private String getVersion(@NotNull String packageName) {
-        PackageInfo packageInfo = Util.getPackageInfo(getNonNullActivity(), packageName);
+    private String getVersion(@Nullable String packageName) {
+        if (packageName == null) {
+            return "(no version for null package)";
+        }
+
+        Activity activity = getActivity();
+        if (activity == null) {
+            return "(no version; null activity)";
+        }
+
+        PackageInfo packageInfo = Util.getPackageInfo(activity, packageName);
         if (packageInfo == null) {
             return "(unknown version)";
         }
@@ -307,7 +440,14 @@ public class ThermometerLogViewer extends Fragment {
 
     @NotNull
     private String getEmailSubject() {
-        String versionName = getVersion(getNonNullActivity().getPackageName());
+        String versionName;
+
+        Activity activity = getActivity();
+        if (activity != null) {
+            versionName = getVersion(activity.getPackageName());
+        } else {
+            versionName = "[unknown version; null activity]";
+        }
 
         return "Thermometer Widget " + versionName;
     }
@@ -333,37 +473,6 @@ public class ThermometerLogViewer extends Fragment {
         }
 
         return text.getBuffer();
-    }
-
-    /**
-     * Get info about our widget service process.
-     *
-     * @return Null if no service info is found.
-     */
-    @Nullable
-    private ActivityManager.RunningServiceInfo getServiceInfo() {
-        ActivityManager activityManager =
-                (ActivityManager)getNonNullActivity().getSystemService(Context.ACTIVITY_SERVICE);
-        assert activityManager != null;
-
-        List<ActivityManager.RunningServiceInfo> runningServices = activityManager.getRunningServices(999);
-        assert runningServices != null;
-
-        String myPackageName = getNonNullActivity().getComponentName().getPackageName();
-        assert myPackageName != null;
-
-        for (ActivityManager.RunningServiceInfo serviceInfo : runningServices) {
-            ComponentName componentName = serviceInfo.service;
-            if (componentName == null) {
-                continue;
-            }
-            if (myPackageName.equals(componentName.getPackageName())) {
-                return serviceInfo;
-            }
-        }
-
-        // Not found
-        return null;
     }
 
     /**
@@ -398,83 +507,6 @@ public class ThermometerLogViewer extends Fragment {
         }
     }
 
-    private CharSequence getServiceCpuStats() {
-        ActivityManager.RunningServiceInfo serviceInfo = getServiceInfo();
-        if (serviceInfo == null) {
-            return "Service not running (no RunningServiceInfo)";
-        }
-
-        int servicePid = serviceInfo.pid;
-        if (servicePid == 0) {
-            return "Service not running (no PID)";
-        }
-
-        float uptime = SystemClock.elapsedRealtime() - serviceInfo.activeSince;
-
-        String[] procPidStat = getPidStats(servicePid);
-        if (procPidStat == null) {
-            return "Stats unavailable for PID " + servicePid;
-        }
-        // Magic constants are from the Linux proc man page:
-        // http://linux.die.net/man/5/proc look for "/proc/[pid]/stat"
-        // The -1s are because the man page is one-based and the array indices are zero-based.
-        long userTicks = Long.valueOf(procPidStat[14 - 1]);
-        long kernelTicks = Long.valueOf(procPidStat[15 - 1]);
-
-        // FIXME: How can we find out the real value? 100 seems to be most common.
-        final float _SC_CLK_TCK = 100;
-        float userMs = (1000 * userTicks) / _SC_CLK_TCK;
-        float kernelMs = (1000 * kernelTicks) / _SC_CLK_TCK;
-
-        StringBuilder builder = new StringBuilder();
-        builder.append(String.format("Widget uptime: %s", Util.msToTimeString((long)uptime)));
-        builder.append(String.format("\nCPU seconds per hour uptime: %.1f (total=%s)",
-                3600 * (kernelMs + userMs) / uptime,
-                Util.msToTimeString((long)(kernelMs + userMs))));
-        builder.append(String.format("\nCPU seconds per hour uptime (usr): %.1f (total=%s)",
-                3600 * userMs / uptime,
-                Util.msToTimeString((long)userMs)));
-        builder.append(String.format("\nCPU seconds per hour uptime (sys): %.1f (total=%s)",
-                3600 * kernelMs / uptime,
-                Util.msToTimeString((long)kernelMs)));
-        return builder;
-    }
-
-    private CharSequence listInstalledPackages() {
-        final PackageManager packageManager = getNonNullActivity().getPackageManager();
-        assert packageManager != null;
-
-        SortedSet<String> packages = new TreeSet<String>();
-        for (PackageInfo packageInfo : packageManager.getInstalledPackages(0)) {
-            ApplicationInfo applicationInfo = packageInfo.applicationInfo;
-            CharSequence applicationName = null;
-            if (applicationInfo != null) {
-                applicationName = packageInfo.applicationInfo.loadLabel(packageManager);
-            }
-
-            StringBuilder builder = new StringBuilder();
-            if (applicationName != null && applicationName.length() > 0) {
-                builder.append(applicationName);
-            } else {
-                builder.append(packageInfo.packageName);
-            }
-
-            builder.append(" ");
-            builder.append(packageInfo.versionName);
-
-            packages.add(builder.toString());
-        }
-
-        StringBuilder builder = new StringBuilder();
-        for (String packageInfo : packages) {
-            builder.append("  ");
-            builder.append(packageInfo);
-            builder.append("\n");
-        }
-
-        return builder.toString();
-    }
-
     private void emailDeveloper() {
         // Compose an e-mail with the log file attached
         Intent intent = new Intent(Intent.ACTION_SEND);
@@ -488,19 +520,16 @@ public class ThermometerLogViewer extends Fragment {
 
         // Attach the newly dumped log file
         Uri uri = getEmailLogAttachmentUri();
-        if (uri == null) {
-            Log.e(TAG, "No log file to attach");
+        if (uri != null) {
+            intent.putExtra(Intent.EXTRA_STREAM, uri);
+        } else if (logView != null) {
+            Log.e(TAG, "Log file unavailable, inlining problem report");
+            intent.putExtra(Intent.EXTRA_TEXT, logView.getText());
+        } else {
+            Log.e(TAG, "No text to attach");
             return;
         }
-        intent.putExtra(Intent.EXTRA_STREAM, uri);
 
         startActivity(Intent.createChooser(intent, "Report Problem"));
-    }
-
-    @NotNull
-    public Activity getNonNullActivity() {
-        Activity activity = getActivity();
-        assert activity != null;
-        return activity;
     }
 }
