@@ -90,7 +90,6 @@ implements LocationListener, Closeable
     public UpdateListener(@NotNull final WidgetManager widgetManager) {
         this.widgetManager = widgetManager;
 
-        widgetManager.setStatus("Location service starting...");
         locationClient = new LocationClient(widgetManager, new GooglePlayServicesClient.ConnectionCallbacks() {
             @Override
             public void onConnected(Bundle bundle) {
@@ -195,10 +194,15 @@ implements LocationListener, Closeable
      * Retry connecting to Google Play Services API; this can be useful to do after it has been upgraded on the device.
      */
     public void reconnectGpsa() {
-        if (locationClient.isConnecting() || locationClient.isConnected()) {
-            locationClient.disconnect();
+        try {
+            if (locationClient.isConnecting() || locationClient.isConnected()) {
+                locationClient.disconnect();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "Disconnecting from GPSA failed, will attempt reconnect", e);
         }
 
+        widgetManager.setStatus("Location service starting...");
         try {
             locationClient.connect();
         } catch (Exception e) {
@@ -257,7 +261,13 @@ implements LocationListener, Closeable
 
         Location lastKnownLocation = null;
         if (locationClient.isConnected()) {
-            lastKnownLocation = locationClient.getLastLocation();
+            try {
+                lastKnownLocation = locationClient.getLastLocation();
+            } catch (Exception e) {
+                Log.e(TAG, "Getting last known location from GPSA failed, attempting reconnect", e);
+                reconnectGpsa();
+                return cachedLocation;
+            }
         } else {
             Log.w(TAG, "Location client " + locationClientStatus);
         }
@@ -334,7 +344,13 @@ implements LocationListener, Closeable
         LocationRequest locationRequest = new LocationRequest();
         locationRequest.setInterval(41 * 60 * 1000);
         locationRequest.setPriority(LocationRequest.PRIORITY_LOW_POWER);
-        locationClient.requestLocationUpdates(locationRequest, this);
+        try {
+            locationClient.requestLocationUpdates(locationRequest, this);
+        } catch (Exception e) {
+            Log.e(TAG, "Requesting GPSA location updates failed, attempting reconnect", e);
+            reconnectGpsa();
+            return;
+        }
 
         widgetManager.setStatus("Locating phone...", null);
         Log.d(TAG, "Location listener registered");
@@ -370,7 +386,11 @@ implements LocationListener, Closeable
 
         Log.d(TAG, "Deregistering preferences change listener...");
         widgetManager.getPreferences().unregisterOnSharedPreferenceChangeListener(preferenceChangeListener);
-        locationClient.disconnect();
+        try {
+            locationClient.disconnect();
+        } catch (Exception e) {
+            Log.w(TAG, "GPSA failed during shutdown", e);
+        }
     }
 
     @Override
