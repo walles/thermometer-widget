@@ -228,9 +228,9 @@ implements LocationListener, Closeable
 
         Notification.Builder resolutionBuilder = new Notification.Builder(widgetManager);
         resolutionBuilder.setContentTitle("Upgrade / Install location services");
-        resolutionBuilder.setContentText("Thermometer Widget needs needs location services upgraded or installed");
+        resolutionBuilder.setContentText("Thermometer Widget needs location services upgraded or installed");
         resolutionBuilder.setContentIntent(resolution);
-        resolutionBuilder.setTicker("Thermometer Widget needs to have location services upgraded or installed");
+        resolutionBuilder.setTicker("Thermometer Widget needs location services upgraded or installed");
         resolutionBuilder.setSmallIcon(R.drawable.icon);
 
         NotificationManager notificationManager =
