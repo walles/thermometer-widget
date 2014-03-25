@@ -20,7 +20,10 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -57,7 +60,7 @@ import org.jetbrains.annotations.Nullable;
 // Need to suppress warning about GENERATE_TRACEFILES always being false / true
 @SuppressWarnings("ConstantConditions")
 public class WidgetManager extends Service {
-    final long t0;
+    final long serviceStartTimestamp;
     int display_or_timer_count = 0;
 
     /**
@@ -133,7 +136,7 @@ public class WidgetManager extends Service {
     /**
      * This thing puts log messages into files for us.
      */
-    private Process logcat;
+    private java.lang.Process logcat;
 
     /**
      * If non-null, we're having problems with the Google Play Services API, and invoking this intent should resolve
@@ -145,7 +148,7 @@ public class WidgetManager extends Service {
      * Create a new widget manager.
      */
     public WidgetManager() {
-        t0 = System.currentTimeMillis();
+        serviceStartTimestamp = System.currentTimeMillis();
 
         if (GENERATE_TRACEFILES) {
             Debug.startMethodTracing(TRACE_FILE_NAME);
@@ -166,8 +169,9 @@ public class WidgetManager extends Service {
     public void onCreate() {
         super.onCreate();
 
-        File logdir = getDir("logs", MODE_PRIVATE);
-        File logfile = new File(logdir, "log");
+        killOldLogcat();
+
+        File logfile = getLogFile();
 
         // Print a banner to the current log file so the restart can be easily spotted
         PrintWriter writer = null;
@@ -185,18 +189,101 @@ public class WidgetManager extends Service {
         }
 
         try {
-            logcat = Runtime.getRuntime().exec(new String[] {
-                    "logcat",
-                    "-v", "time",
-                    "-f", logfile.getAbsolutePath(),
-                    "-n", "3",
-                    "-r", "16"
-            });
+            logcat = Runtime.getRuntime().exec(createLogcatCommandLine());
 
-            Log.i(TAG, "Background logcat started, logging into " + logdir);
+            Log.i(TAG, "Background logcat started, logging into " + logfile.getParent());
         } catch (IOException e) {
             Log.e(TAG, "Executing logcat failed", e);
         }
+    }
+
+    /**
+     * Create a logcat command line for rotating logs into where {@link #getLogFile()} points.
+     */
+    private String[] createLogcatCommandLine() {
+        return new String[] {
+                "logcat",
+                "-v", "time",
+                "-f", getLogFile().getAbsolutePath(),
+                "-n", "3",
+                "-r", "16"
+        };
+    }
+
+    /**
+     * This method decides where logcat should rotate its logs into.
+     */
+    private File getLogFile() {
+        File logdir = getDir("logs", MODE_PRIVATE);
+        return new File(logdir, "log");
+    }
+
+    /**
+     * Find and kill any old logcat invocations by us that are running on the system.
+     */
+    private void killOldLogcat() {
+        long t0 = System.currentTimeMillis();
+        Log.d(TAG, "Cleaning up old logcat processes...");
+
+        final String logcatCommandLine[] = createLogcatCommandLine();
+
+        int killed = 0;
+        for (File directory : new File("/proc").listFiles()) {
+            if (!directory.isDirectory()) {
+                continue;
+            }
+
+            File cmdline = new File(directory, "cmdline");
+            if (!cmdline.exists()) {
+                continue;
+            }
+            if (!cmdline.canRead()) {
+                continue;
+            }
+
+            BufferedReader cmdlineReader;
+            try {
+                cmdlineReader = new BufferedReader(new FileReader(cmdline));
+            } catch (FileNotFoundException e) {
+                continue;
+            }
+            try {
+                String line = cmdlineReader.readLine();
+                if (line == null) {
+                    continue;
+                }
+                String processCommandLine[] = line.split("\0");
+                if (!Arrays.equals(logcatCommandLine, processCommandLine)) {
+                    continue;
+                }
+
+                int pid;
+                try {
+                    pid = Integer.parseInt(directory.getName());
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "Couldn't parse into pid: " + directory.getName());
+                    continue;
+                }
+
+                Log.i(TAG, "Killing old logcat process: " + pid);
+                android.os.Process.killProcess(pid);
+                killed++;
+            } catch (IOException e) {
+                Log.w(TAG, "Reading command line failed: " + cmdline.getAbsolutePath());
+                //noinspection UnnecessaryContinue
+                continue;
+            } finally {
+                try {
+                    cmdlineReader.close();
+                } catch (IOException e) {
+                    // Closing is a best-effort operation, this exception intentionally ignored
+                    Log.w(TAG, "Failed to close " + cmdline, e);
+                }
+            }
+        }
+
+        long t1 = System.currentTimeMillis();
+        Log.i(TAG, "Killed " + killed + " old logcats in " + Util.msToTimeString(t1 - t0));
     }
 
     public synchronized SharedPreferences getPreferences() {
@@ -558,7 +645,7 @@ public class WidgetManager extends Service {
         if (why == UpdateReason.DISPLAY_OR_TIMER) {
             // This can mean another widget was added; make sure it's fresh
             display_or_timer_count++;
-            long dtHours = (System.currentTimeMillis() - t0) / (1000 * 60 * 60);
+            long dtHours = (System.currentTimeMillis() - serviceStartTimestamp) / (1000 * 60 * 60);
             if (dtHours == 0) {
                 dtHours = 1;
             }
