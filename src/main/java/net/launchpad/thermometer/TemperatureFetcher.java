@@ -21,8 +21,11 @@ package net.launchpad.thermometer;
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -83,6 +86,22 @@ public class TemperatureFetcher extends Thread implements Callback {
         }
 
         return urlWithAppid.substring(0, appIdIndex) + "APPID=XXXXXX";
+    }
+
+    private static void saveJsonWeather(JSONObject jsonWeather, File jsonFile) {
+        PrintWriter printWriter = null;
+        try {
+            printWriter = new PrintWriter(new FileWriter(jsonFile));
+            printWriter.println(jsonWeather.toString());
+            printWriter.close();
+            Log.i(TAG, "JSON weather cached into " + jsonFile.getAbsolutePath());
+        } catch (IOException e) {
+            Log.e(TAG, "Unable to cache weather into " + jsonFile.getAbsolutePath());
+        } finally {
+            if (printWriter != null) {
+                printWriter.close();
+            }
+        }
     }
 
     /**
@@ -148,7 +167,9 @@ public class TemperatureFetcher extends Thread implements Callback {
             try {
                 jsonString = fetchUrl(url);
 
-                Weather weather = new Weather(new JSONObject(jsonString));
+                JSONObject jsonWeather = new JSONObject(jsonString);
+                Weather weather = new Weather(jsonWeather);
+                saveJsonWeather(jsonWeather, widgetManager.getWeatherJsonFile());
 
                 // If weather is 40 minutes old, wait at least 20 minutes until next fetch
                 int fetchValidMinutes = weather.getAgeMinutes() / 2;

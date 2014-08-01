@@ -30,6 +30,7 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.Scanner;
 
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
@@ -51,6 +52,8 @@ import android.util.Log;
 import android.widget.RemoteViews;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * This class contains all the logic for {@link ThermometerWidget}.
@@ -331,6 +334,36 @@ public class WidgetManager extends Service {
         }
     }
 
+    public File getWeatherJsonFile() {
+        return new File(getFilesDir(), "last-weather.json");
+    }
+
+    @Nullable
+    private static Weather loadJsonWeather(File jsonFile) {
+        if (!jsonFile.exists()) {
+            // Will happen the first time the widget is started on a device
+            return null;
+        }
+
+        String jsonString = null;
+        try {
+            // From http://stackoverflow.com/questions/326390/how-to-create-a-java-string-from-the-contents-of-a-file
+            jsonString = new Scanner(jsonFile).useDelimiter("\\A").next();
+            Weather weather = new Weather(new JSONObject(jsonString));
+            Log.i(TAG, "Cached weather loaded from " + jsonFile.getAbsolutePath());
+            return weather;
+        } catch (IOException e) {
+            Log.e(TAG, "Unable to read cached weather from " + jsonFile.getAbsolutePath(), e);
+            return null;
+        } catch (JSONException e) {
+            Log.e(TAG, "Bad JSON in weather cache file " + jsonFile.getAbsolutePath(), e);
+            return null;
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Cached JSON is no weather: <" + jsonString + ">", e);
+            return null;
+        }
+    }
+
     /**
      * What's the weather like around here?
      *
@@ -339,6 +372,10 @@ public class WidgetManager extends Service {
     @Nullable
     public Weather getWeather() {
         synchronized (weatherLock) {
+            if (this.weather == null) {
+                this.weather = loadJsonWeather(getWeatherJsonFile());
+            }
+
             return this.weather;
         }
     }
