@@ -135,8 +135,16 @@ public class WeatherPresenter {
         Log.d(TAG, "Displaying temperature: <" + getTemperatureString() + ">");
         float textSize = TEMPERATURE_HEIGHT;
         Paint temperaturePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        if (isOld()) {
+            // Strike through old temperature to indicate its unreliability
+            temperaturePaint.setFlags(temperaturePaint.getFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+        }
         temperaturePaint.setTextSize(textSize);
         int temperatureStyle = isWindChilledAcrossFreezing() ? Typeface.BOLD_ITALIC : Typeface.BOLD;
+        if (isOld()) {
+            // Don't boldface old temperatures
+            temperatureStyle = temperatureStyle & ~Typeface.BOLD;
+        }
         Typeface temperatureTypeface = Typeface.create(Typeface.DEFAULT, temperatureStyle);
         temperaturePaint.setTypeface(temperatureTypeface);
         Rect bounds = new Rect();
@@ -290,7 +298,7 @@ public class WeatherPresenter {
                 subtextString = "";
             }
 
-            if (weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES) {
+            if (isOld()) {
                 // Present excuses for our old data
                 subtextString = excuse;
             }
@@ -330,5 +338,13 @@ public class WeatherPresenter {
         }
 
         dirty = false;
+    }
+
+    private boolean isOld() {
+        if (weather == null) {
+            return false;
+        }
+
+        return weather.getAgeMinutes() > MAX_WEATHER_AGE_MINUTES;
     }
 }
