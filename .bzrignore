@@ -1,6 +1,7 @@
 ./src/main/res/drawable-*/icon.png
 ./graphics/thermometer-face.png
 ./graphics/market-icon.png
+./graphics/market-function.png
 ./src/main/java/net/launchpad/thermometer/Constants.java
 ./local.properties
 ./gradlew
