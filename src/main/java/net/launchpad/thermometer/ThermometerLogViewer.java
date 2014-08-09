@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -315,7 +316,11 @@ public class ThermometerLogViewer extends Fragment {
                 ApplicationInfo applicationInfo = packageInfo.applicationInfo;
                 CharSequence applicationName = null;
                 if (applicationInfo != null) {
-                    applicationName = packageInfo.applicationInfo.loadLabel(packageManager);
+                    try {
+                        applicationName = applicationInfo.loadLabel(packageManager);
+                    } catch (Resources.NotFoundException e) {
+                        Log.w(TAG, "Resource NotFoundException while loading label for " + packageInfo.packageName);
+                    }
                 }
 
                 StringBuilder builder = new StringBuilder();
