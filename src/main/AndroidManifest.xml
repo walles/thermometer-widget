@@ -27,21 +27,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/thermometer_widget_provider" />
+
             <intent-filter>
                 <action android:name="android.net.wifi.STATE_CHANGE"/>
             </intent-filter>
-        </receiver>
 
-        <receiver android:name=".ThermometerWidget">
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_ADDED"/>
                 <action android:name="android.intent.action.PACKAGE_REPLACED"/>
                 <action android:name="android.intent.action.PACKAGE_REMOVED"/>
                 <data android:scheme="package"/>
             </intent-filter>
-        </receiver>
 
-        <receiver android:name=".ThermometerWidget">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
             </intent-filter>

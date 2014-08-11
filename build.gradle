@@ -3,7 +3,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.9.+'
+        classpath 'com.android.tools.build:gradle:0.12.+'
     }
 }
 
@@ -36,6 +36,6 @@ android {
     dependencies {
         compile 'com.larswerkman:HoloColorPicker:1.1'
         compile 'com.intellij:annotations:+@jar'
-        compile 'com.google.android.gms:play-services:5.0.77'
+        compile 'com.google.android.gms:play-services:4.0.30'
     }
 }
