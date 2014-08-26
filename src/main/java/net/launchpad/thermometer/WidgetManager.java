@@ -348,7 +348,13 @@ public class WidgetManager extends Service {
         String jsonString = null;
         try {
             // From http://stackoverflow.com/questions/326390/how-to-create-a-java-string-from-the-contents-of-a-file
-            jsonString = new Scanner(jsonFile).useDelimiter("\\A").next();
+            final Scanner scanner = new Scanner(jsonFile).useDelimiter("\\A");
+            if (!scanner.hasNext()) {
+                Log.w(TAG, "Weather cache file seems empty: " + jsonFile.getAbsolutePath());
+                return null;
+            }
+
+            jsonString = scanner.next();
             Weather weather = new Weather(new JSONObject(jsonString));
             Log.i(TAG, "Cached weather loaded from " + jsonFile.getAbsolutePath());
             return weather;
