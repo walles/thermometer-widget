@@ -125,6 +125,10 @@ public final class Util {
             return true;
         }
 
+        if ("google_sdk_x86".equals(Build.PRODUCT)) {
+            return true;
+        }
+
         return false;
     }
 
