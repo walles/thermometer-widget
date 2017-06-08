@@ -20,18 +20,6 @@ package net.launchpad.thermometer;
 
 import static net.launchpad.thermometer.ThermometerWidget.TAG;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.Scanner;
-
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -50,10 +38,25 @@ import android.preference.PreferenceManager;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.RemoteViews;
+
+import net.jcip.annotations.GuardedBy;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.Scanner;
 
 /**
  * This class contains all the logic for {@link ThermometerWidget}.
@@ -94,6 +97,7 @@ public class WidgetManager extends Service {
      * Listens for events and requests widget updates as required.
      */
     @Nullable
+    @GuardedBy("weatherLock")
     private UpdateListener updateListener;
 
     /**
@@ -677,10 +681,12 @@ public class WidgetManager extends Service {
         }
 
         if (why == UpdateReason.GPSA_RECONNECT) {
-            if (updateListener != null) {
-                updateListener.reconnectGpsa();
-            } else {
-                Log.i(TAG, "Ignoring Google Play Services API change");
+            synchronized (weatherLock) {
+                if (updateListener != null) {
+                    updateListener.reconnectGpsa();
+                } else {
+                    Log.i(TAG, "Ignoring Google Play Services API change");
+                }
             }
             return;
         }
