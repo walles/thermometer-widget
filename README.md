@@ -1,3 +1,22 @@
+# Thermometer Widget
+An Android widget displaying the current outdoor temperature.
+
+Temperature observations are fetched from
+the nearest weather station as described at
+<http://www.geonames.org/export/JSON-webservices.html#findNearByWeatherJSON>.
+
+# Building
+Before building you need to create
+`src/main/java/net/launchpad/thermometer/Constants.java`:
+```java
+package net.launchpad.thermometer;
+
+interface Constants { String APPID = YOUR_APPID_HERE; }
+```
+
+The actual `APPID` string can be empty, or you can get your own at
+<http://openweathermap.org/appid>.
+
 # TODO
 * Add Crashlytics support
 
@@ -13,7 +32,7 @@
 * Write tests for Util.toLocal()
 
 
-# DONE
+## DONE
 * Pop up preferences when widget is clicked.
 
 * Don't show preferences when adding widget, it's just confusing and
