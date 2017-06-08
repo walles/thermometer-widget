@@ -6,12 +6,17 @@ the nearest weather station as described at
 <http://www.geonames.org/export/JSON-webservices.html#findNearByWeatherJSON>.
 
 # Building
-Before building you need to create
+Before building you need to run `render-icons.sh` to generate graphical
+resources.
+
+Also, you need to create
 `src/main/java/net/launchpad/thermometer/Constants.java`:
 ```java
 package net.launchpad.thermometer;
 
-interface Constants { String APPID = YOUR_APPID_HERE; }
+interface Constants {
+  String APPID = YOUR_APPID_HERE;
+}
 ```
 
 The actual `APPID` string can be empty, or you can get your own at
